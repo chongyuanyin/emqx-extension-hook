@@ -1,0 +1,126 @@
+%%-*- mode: erlang -*-
+
+{mapping, "exhook.drivers", "emqx_extension_hook.drivers", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.drivers.$name.$key", "emqx_extension_hook.drivers", [
+  {datatype, string}
+]}.
+
+{translation, "emqx_extension_hook.drivers", fun(Conf) ->
+
+    Filter  = fun(Opts) -> [{K, V} || {K, V} <- Opts, V =/= undefined] end,
+
+    Duration = fun(S) ->
+                   case cuttlefish_duration:parse(S, ms) of
+                       Ms when is_integer(Ms) -> Ms;
+                       {error, R} -> error(R)
+                   end
+               end,
+    Integer = fun(S) -> list_to_integer(S) end,
+
+    Atom = fun(S) -> list_to_atom(S) end,
+
+    Python = fun(Prefix) ->
+               [{pool_size, Integer(cuttlefish:conf_get(Prefix ++ ".pool_size", Conf, "8"))},  %% ecpool
+                {python_path, cuttlefish:conf_get(Prefix ++ ".path", Conf, undefined)},
+                {call_timeout, Duration(cuttlefish:conf_get(Prefix ++ ".call_timout", Conf, "5s"))}]
+            end,
+
+    Options = fun(python2) -> Python("exhook.drivers.python2");
+                 (python3) -> Python("exhook.drivers.python3");
+                 (_) -> error(not_supported_drivers_type)
+              end,
+    [{Atom(Name), Options(Atom(Name))} || Name <- string:tokens(cuttlefish:conf_get("exhook.drivers", Conf), ",")]
+end}.
+
+{mapping, "exhook.rule.$driver.client.connect", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.client.connack", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.client.connected", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.client.disconnected", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.client.authenticate", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.client.check_acl", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.client.subscribe", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.client.unsubscribe", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.session.created", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.session.subscribed", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.session.unsubscribed", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.session.resumed", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.session.discarded", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.session.takeovered", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.session.terminated", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.message.publish", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.message.delivered", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.message.acked", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "exhook.rule.$driver.message.dropped", "emqx_extension_hook.hooks", [
+  {datatype, string}
+]}.
+
+{translation, "emqx_extension_hook.hooks", fun(Conf) ->
+    Atom = fun(S) -> list_to_atom(S) end,
+    maps:to_list(
+    lists:foldr(fun({[_, _, Driver0, Name1, Name2], Val}, Acc) ->
+        Driver = Atom(Driver0),
+        Name = Atom(lists:concat([Name1, "_", Name2])),
+        case maps:get(Driver, Acc, undeifned) of
+            undeifned -> Acc#{Driver => #{Name  => Val}};
+            Names ->
+                Acc#{Driver := Names#{Name => Val}}
+        end
+    end, #{}, Conf))
+end}.

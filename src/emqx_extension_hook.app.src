@@ -1,0 +1,12 @@
+{application, emqx_extension_hook,
+ [{description, "EMQ X Extension for Hook"},
+  {vsn, "git"},
+  {modules, []},
+  {registered, []},
+  {mod, {emqx_extension_hook_app, []}},
+  {applications,
+   [kernel, stdlib]},
+  {env,[]},
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
