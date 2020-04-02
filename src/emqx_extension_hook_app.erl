@@ -79,8 +79,8 @@ parse_hook_rules(Name) ->
                    (_) -> #{}
                 end,
 
-    maps:map(fun({_, Spec}) ->
+    maps:map(fun(_, Spec) ->
         #{<<"module">> := Module,
-          <<"callback">> := Function} = E = emqx_json:decode(Spec),
+          <<"callback">> := Function} = E = emqx_json:decode(Spec, [return_maps]),
         {Module, Function, ParseOpts(E)}
-    end, #{}, RawHooks).
+    end, RawHooks).

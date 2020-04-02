@@ -99,207 +99,220 @@ unload() ->
     emqx:unhook('message.acked',       {?MODULE, on_message_acked}),
     emqx:unhook('message.dropped',     {?MODULE, on_message_dropped}).
 
+-spec cast(atom(), list()) -> ok.
+cast(Name, Args) ->
+    cast(Name, Args, emqx_extension_hook_app:drivers()).
 
--spec send(atom(), map()) -> {ok, map()} | {error, term()}.
-send(Name, Args) ->
-    send(Name, Args, emqx_extension_hook_app:drivers()).
+cast(_, _, []) -> ok;
+cast(Name, Args, [Driver|More]) ->
+    emqx_extension_hook_driver:run_hook(Name, Args, Driver),
+    cast(Name, Args, More).
 
-send(_, _, []) -> ok;
-send(Name, Args, [Driver|More]) ->
-    emqx_extension_hook:call(Name, Args, Driver),
-    send(Name, Args, More).
+-spec call_fold(atom(), list(), term()) -> ok | {stop, term()}.
+call_fold(Name, InfoArgs, AccArg) ->
+    call_fold(Name, InfoArgs, AccArg, emqx_extension_hook_app:drivers()).
+
+call_fold(_, _, _, []) ->
+    ok;
+call_fold(Name, InfoArgs, AccArg, [Driver|More]) ->
+    case emqx_extension_hook_driver:run_hook(Name, InfoArgs ++ [AccArg], Driver) of
+        ok         -> call_fold(Name, InfoArgs, AccArg, More);
+        {error, _} -> call_fold(Name, InfoArgs, AccArg, More);
+        {ok, NAcc} ->
+            case validate_acc_arg(Name, NAcc) of
+                true ->
+                    {stop, NAcc};
+                _ ->
+                    ?LOG(error, "Got invalid return type for calling ~p on ~p",
+                         [Name, emqx_extension_hook_driver:name(Driver)]),
+                    call_fold(Name, InfoArgs, AccArg, More)
+            end
+    end.
+
+validate_acc_arg('client_authenticate', N) when is_boolean(N) -> true;
+validate_acc_arg('client_check_acl',    N) when is_boolean(N) -> true;
+validate_acc_arg('message_publish',     L) when is_list(L) -> validate_msg(L, true);
+validate_acc_arg(_,                     _) -> false.
+
+validate_msg(_, false) -> false;
+validate_msg([{topic, T} | More], _) ->
+    validate_msg(More, is_binary(T));
+validate_msg([{payload, P} | More], _) ->
+    validate_msg(More, is_binary(P));
+validate_msg([{qos, Q} | More], _) ->
+    validate_msg(More, Q =< 2 andalso Q >= 0).
 
 %%--------------------------------------------------------------------
 %% Clients
 %%--------------------------------------------------------------------
 
-on_client_connect(ConnInfo = #{clientid := ClientId, username := Username, peername := {Peerhost, _}}, Props) ->
-    Args = #{clientid => ClientId,
-             username => Username,
-             ipaddress => iolist_to_binary(ntoa(Peerhost)),
-             keepalive => maps:get(keepalive, ConnInfo),
-             proto_ver => maps:get(proto_ver, ConnInfo)
-            },
-    send('client_connect', Args),
-    {ok, Props};
-on_client_connect(_ConnInfo, _ConnProp) ->
-    ok.
+on_client_connect(ConnInfo, _Props) ->
+    cast('client_connect', [conninfo(ConnInfo), props(_Props)]).
 
-on_client_connack(ConnInfo = #{clientid := ClientId, username := Username, peername := {Peerhost, _}}, Rc, Props) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            , ipaddress => iolist_to_binary(ntoa(Peerhost))
-            , keepalive => maps:get(keepalive, ConnInfo)
-            , proto_ver => maps:get(proto_ver, ConnInfo)
-            , conn_ack => Rc
-            },
-    send('client_connack', Args),
-    {ok, Props};
-on_client_connack(_ConnInfo, _Rc, _AckProps) ->
-    ok.
+on_client_connack(ConnInfo, Rc, _Props) ->
+    cast('client_connack', [conninfo(ConnInfo), Rc, props(_Props)]).
 
-on_client_connected(#{clientid := ClientId, username := Username, peerhost := Peerhost}, ConnInfo) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            , ipaddress => iolist_to_binary(ntoa(Peerhost))
-            , keepalive => maps:get(keepalive, ConnInfo)
-            , proto_ver => maps:get(proto_ver, ConnInfo)
-            , connected_at => maps:get(connected_at, ConnInfo)
-            },
-    send('client_connected', Args),
-    ok;
-on_client_connected(_ClientInfo, _ConnInfo) ->
-    ok.
+on_client_connected(ClientInfo, _ConnInfo) ->
+    cast('client_connected', [clientinfo(ClientInfo)]).
 
 on_client_disconnected(ClientInfo, {shutdown, Reason}, ConnInfo) when is_atom(Reason) ->
     on_client_disconnected(ClientInfo, Reason, ConnInfo);
-on_client_disconnected(#{clientid := ClientId, username := Username}, Reason, _ConnInfo) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            , reason => printable(Reason)
-            },
-    send('client_disconnected', Args),
-    ok.
+on_client_disconnected(ClientInfo, Reason, _ConnInfo) ->
+    cast('client_disconnected', [clientinfo(ClientInfo), stringfy(Reason)]).
 
-%% @private
-printable(Term) when is_atom(Term); is_binary(Term) ->
-    Term;
-printable(Term) when is_tuple(Term) ->
-    iolist_to_binary(io_lib:format("~p", [Term])).
+on_client_authenticate(ClientInfo, AuthResult) ->
+    AccArg = maps:get(auth_result, AuthResult, undefined) == success,
+    case call_fold('client_authenticate', [clientinfo(ClientInfo)], AccArg) of
+        {stop, Bool} when is_boolean(Bool) ->
+            Result = case Bool of true -> success; _ -> not_authorized end,
+            {stop, AuthResult#{auth_result => Result, anonymous => false}};
+        _ ->
+            {ok, AuthResult}
+    end.
 
-on_client_authenticate(#{clientid := ClientId, username := Username}, AuthResult) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('client_authenticate', Args),
-    {ok, AuthResult}.
+on_client_check_acl(ClientInfo, Topic, PubSub, Result) ->
+    AccArg = Result == allow,
+    case call_fold('client_check_acl', [clientinfo(ClientInfo), Topic, PubSub], AccArg) of
+        {stop, Bool} when is_boolean(Bool) ->
+            NResult = case Bool of true -> allow; _ -> deny end,
+            {stop, NResult};
+        _ -> {ok, Result}
+    end.
 
-on_client_check_acl(_ClientInfo = #{clientid := ClientId, username := Username}, Topic, PubSub, Result) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('client_check_acl', Args),
-    {ok, Result}.
+on_client_subscribe(ClientInfo, Props, TopicFilters) ->
+    cast('client_subscribe', [clientinfo(ClientInfo), props(Props), topicfilters(TopicFilters)]).
 
-on_client_subscribe(#{clientid := ClientId, username := Username}, _Properties, TopicFilters) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('client_subscribe', Args),
-    {ok, TopicFilters}.
-
-on_client_unsubscribe(#{clientid := ClientId, username := Username}, _Properties, TopicFilters) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('client_unsubscribe', Args),
-    {ok, TopicFilters}.
+on_client_unsubscribe(Clientinfo, Props, TopicFilters) ->
+    cast('client_unsubscribe', [clientinfo(Clientinfo), props(Props), topicfilters(TopicFilters)]).
 
 %%--------------------------------------------------------------------
 %% Session
 %%--------------------------------------------------------------------
 
-on_session_created(#{clientid := ClientId, username := Username}, SessInfo) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('session_created', Args),
-    ok.
+on_session_created(ClientInfo, _SessInfo) ->
+    cast('session_created', [clientinfo(ClientInfo)]).
 
-on_session_subscribed(#{clientid := ClientId, username := Username}, Topic, SubOpts) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('session_subscribed', Args),
-    ok.
+on_session_subscribed(Clientinfo, Topic, SubOpts) ->
+    cast('session_subscribed', [clientinfo(Clientinfo), Topic, props(SubOpts)]).
 
-on_session_unsubscribed(#{clientid := ClientId, username := Username}, Topic, Opts) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('session_unsubscribed', Args),
-    ok.
+on_session_unsubscribed(ClientInfo, Topic, _SubOpts) ->
+    cast('session_unsubscribed', [clientinfo(ClientInfo), Topic]).
 
-on_session_resumed(#{clientid := ClientId, username := Username}, SessInfo) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('session_resumed', Args),
-    ok.
+on_session_resumed(ClientInfo, _SessInfo) ->
+    cast('session_resumed', [clientinfo(ClientInfo)]).
 
-on_session_discarded(_ClientInfo = #{clientid := ClientId, username := Username}, SessInfo) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('session_discarded', Args),
-    ok.
+on_session_discarded(ClientInfo, _SessInfo) ->
+    cast('session_discarded', [clientinfo(ClientInfo)]).
 
-on_session_takeovered(_ClientInfo = #{clientid := ClientId, username := Username}, SessInfo) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('session_takeovered', Args),
-    ok.
+on_session_takeovered(ClientInfo, _SessInfo) ->
+    cast('session_takeovered', [clientinfo(ClientInfo)]).
 
-on_session_terminated(_ClientInfo = #{clientid := ClientId, username := Username}, Reason, SessInfo) ->
-    Args = #{ clientid => ClientId
-            , username => Username
-            },
-    send('session_terminated', Args),
-    ok.
+on_session_terminated(ClientInfo, Reason, _SessInfo) ->
+    cast('session_terminated', [clientinfo(ClientInfo), stringfy(Reason)]).
 
 %%--------------------------------------------------------------------
 %% Message
 %%--------------------------------------------------------------------
 
-on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}) ->
-    {ok, Message};
-on_message_publish(Message) ->
-    {FromClientId, FromUsername} = format_from(Message),
-    Args = #{ clientid => FromClientId
-            , username => FromUsername
-            },
-    send('message_publish', Args),
-    {ok, Message}.
+on_message_publish(#message{topic = <<"$SYS/", _/binary>>}) ->
+    ok;
+on_message_publish(Message = #message{headers = Headers}) ->
+    case call_fold('message_publish', [], message(Message)) of
+        {stop, false} ->
+            {stop, Message#message{headers = Headers#{allow_publish := false}}};
+        {stop, NMessage} ->
+            {ok, assign_to_message(NMessage, Message)};
+        _ ->
+            {ok, Message}
+    end.
 
 on_message_dropped(#message{topic = <<"$SYS/", _/binary>>}, _By, _Reason) ->
     ok;
-on_message_dropped(Message, _By = #{node := Node}, Reason) ->
-    {FromClientId, FromUsername} = format_from(Message),
-    Args = #{ clientid => FromClientId
-            , username => FromUsername
-            },
-    send('message_dropped', Args),
-    ok.
+on_message_dropped(Message, _By, Reason) ->
+    cast('message_dropped', [message(Message), stringfy(Reason)]).
 
-on_message_delivered(_ClientInfo = #{clientid := ClientId}, Message) ->
-    {FromClientId, FromUsername} = format_from(Message),
-    Args = #{ clientid => FromClientId
-            , username => FromUsername
-            },
-    send('message_delivered', Args),
-    {ok, Message}.
+on_message_delivered(_ClientInfo, #message{topic = <<"$SYS/", _/binary>>}) ->
+    ok;
+on_message_delivered(ClientInfo, Message) ->
+    cast('message_delivered', [clientinfo(ClientInfo), message(Message)]).
 
-on_message_acked(_ClientInfo = #{clientid := ClientId}, Message) ->
-    {FromClientId, FromUsername} = format_from(Message),
-    Args = #{ clientid => FromClientId
-            , username => FromUsername
-            },
-    send('message_acked', Args),
-    ok.
+on_message_acked(_ClientInfo, #message{topic = <<"$SYS/", _/binary>>}) ->
+    ok;
+on_message_acked(ClientInfo, Message) ->
+    cast('message_acked', [clientinfo(ClientInfo), message(Message)]).
 
 %%--------------------------------------------------------------------
 %% Types
 
-format_from(#message{from = ClientId, headers = #{username := Username}}) ->
-    {a2b(ClientId), a2b(Username)};
-format_from(#message{from = ClientId, headers = _HeadersNoUsername}) ->
-    {a2b(ClientId), <<"undefined">>}.
+props(undefined) -> [];
+props(M) when is_map(M) -> maps:to_list(M).
+
+conninfo(_ConnInfo =
+         #{clientid := ClientId, username := Username, peername := {Peerhost, _},
+           sockname := {_, SockPort}, proto_name := ProtoName, proto_ver := ProtoVer,
+           keepalive := Keepalive}) ->
+    [{node, node()},
+     {clientid, ClientId},
+     {username, maybe(Username)},
+     {peerhost, ntoa(Peerhost)},
+     {sockport, SockPort},
+     {proto_name, ProtoName},
+     {proto_ver, ProtoVer},
+     {keepalive, Keepalive}].
+
+clientinfo(ClientInfo =
+           #{clientid := ClientId, username := Username, peerhost := PeerHost,
+             sockport := SockPort, protocol := Protocol, mountpoint := Mountpoiont}) ->
+    [{node, node()},
+     {clientid, ClientId},
+     {username, maybe(Username)},
+     {password, maybe(maps:get(password, ClientInfo, undefined))},
+     {peerhost, ntoa(PeerHost)},
+     {sockport, SockPort},
+     {protocol, Protocol},
+     {mountpoint, maybe(Mountpoiont)},
+     {is_superuser, maps:get(is_superuser, ClientInfo, false)},
+     {anonymous, maps:get(anonymous, ClientInfo, true)}].
+
+message(#message{id = Id, qos = Qos, from = From, topic = Topic, payload = Payload, timestamp = Ts}) ->
+    [{node, node()},
+     {id, hexstr(Id)},
+     {qos, Qos},
+     {from, From},
+     {topic, Topic},
+     {payload, Payload},
+     {timestamp, Ts}].
+
+topicfilters(Tfs = [{_, _}|_]) ->
+    [{Topic, Qos} || {Topic, #{qos := Qos}} <- Tfs];
+topicfilters(Tfs) ->
+    Tfs.
 
 ntoa({0,0,0,0,0,16#ffff,AB,CD}) ->
-    inet_parse:ntoa({AB bsr 8, AB rem 256, CD bsr 8, CD rem 256});
+    list_to_binary(inet_parse:ntoa({AB bsr 8, AB rem 256, CD bsr 8, CD rem 256}));
 ntoa(IP) ->
-    inet_parse:ntoa(IP).
+    list_to_binary(inet_parse:ntoa(IP)).
 
-a2b(A) when is_atom(A) -> erlang:atom_to_binary(A, utf8);
-a2b(A) -> A.
+maybe(undefined) -> <<"">>;
+maybe(B) -> B.
+
+%% @private
+stringfy(Term) when is_atom(Term); is_binary(Term) ->
+    Term;
+stringfy(Term) when is_tuple(Term) ->
+    iolist_to_binary(io_lib:format("~p", [Term])).
+
+hexstr(B) ->
+    iolist_to_binary([io_lib:format("~2.16.0B", [X]) || X <- binary_to_list(B)]).
+
+assign_to_message([], Message) ->
+    Message;
+assign_to_message([{topic, Topic}|More], Message) ->
+    assign_to_message(More, Message#message{topic = Topic});
+assign_to_message([{qos, Qos}|More], Message) ->
+    assign_to_message(More, Message#message{qos = Qos});
+assign_to_message([{payload, Payload}|More], Message) ->
+    assign_to_message(More, Message#message{payload = Payload});
+assign_to_message([_|More], Message) ->
+    assign_to_message(More, Message).
+

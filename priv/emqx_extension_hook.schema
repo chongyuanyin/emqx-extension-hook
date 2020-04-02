@@ -24,12 +24,13 @@
 
     Python = fun(Prefix) ->
                [{pool_size, Integer(cuttlefish:conf_get(Prefix ++ ".pool_size", Conf, "8"))},  %% ecpool
+                {init_module, Atom(cuttlefish:conf_get(Prefix ++ ".init_call", Conf, "main"))}, %% dirver
                 {python_path, cuttlefish:conf_get(Prefix ++ ".path", Conf, undefined)},
                 {call_timeout, Duration(cuttlefish:conf_get(Prefix ++ ".call_timout", Conf, "5s"))}]
             end,
 
-    Options = fun(python2) -> Python("exhook.drivers.python2");
-                 (python3) -> Python("exhook.drivers.python3");
+    Options = fun(python2) -> Filter(Python("exhook.drivers.python2"));
+                 (python3) -> Filter(Python("exhook.drivers.python3"));
                  (_) -> error(not_supported_drivers_type)
               end,
     [{Atom(Name), Options(Atom(Name))} || Name <- string:tokens(cuttlefish:conf_get("exhook.drivers", Conf), ",")]

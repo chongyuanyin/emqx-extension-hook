@@ -12,7 +12,7 @@ compile:
 clean: distclean
 
 ct: compile
-	$(REBAR) as test ct -v
+	$(REBAR) as test ct -v --name emqx_extension_hook_ct@127.0.0.1
 
 eunit: compile
 	$(REBAR) as test eunit

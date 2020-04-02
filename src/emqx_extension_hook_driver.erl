@@ -16,6 +16,10 @@
 
 -module(emqx_extension_hook_driver).
 
+-include_lib("emqx/include/logger.hrl").
+
+-logger_header("ExHook Driver").
+
 %% Load/Unload
 -export([ load/3
         , unload/1
@@ -25,15 +29,16 @@
 %% APIs
 -export([run_hook/3]).
 
-%% init - main:init/1
-%% deinit - main:deinit/1
-%% call -> M:F/x
+%% Infos
+-export([name/1]).
 
 -record(driver, {
           %% Driver name (equal to ecpool name)
           name :: driver_name(),
           %% Driver type
           type :: driver_type(),
+          %% Initial Module name
+          init :: atom(),
           %% Hook Spec
           hookspec :: hook_spec(),
           %% low layer state
@@ -77,31 +82,38 @@
 
 %%--------------------------------------------------------------------
 %% Load/Unload APIs
-%%
-%% - FIXME: start ?? stop ??
 %%--------------------------------------------------------------------
 
--spec load(atom(), list(), hook_spec()) -> ok.
-load(Name, Opts, DeftHooks) ->
-    Spec = pool_spec(Name, Opts),
-    ok = emqx_extension_hook_sup:start_driver_pool(Spec),
-    do_init(Name, Opts, DeftHooks).
+-spec load(atom(), list(), hook_spec()) -> ok | {error, term()} .
+load(Name, Opts0, DeftHooks) ->
+    case lists:keytake(init_module, 1, Opts0) of
+        false -> {error, not_found_initial_module};
+        {value, {_,InitM}, Opts} ->
+            Spec = pool_spec(Name, Opts),
+            ok = emqx_extension_hook_sup:start_driver_pool(Spec),
+            do_init(Name, InitM, DeftHooks)
+    end.
 
 %% FIXME: Does the port will be released??
 
 -spec unload(driver()) -> ok.
-unload(#driver{name = Name}) ->
+unload(#driver{name = Name, init = InitM}) ->
+    do_deinit(Name, InitM),
     emqx_extension_hook_sup:stop_driver_pool(Name).
 
-do_init(Name, _Opts, DeftHooks) ->
+do_deinit(Name, InitM) ->
+    _ = raw_call(type(Name), Name, InitM, 'deinit', []),
+    ok.
+
+do_init(Name, InitM, DeftHooks) ->
     Type = type(Name),
-    case raw_call(Type, Name, 'main', 'init', #{}) of
+    case raw_call(Type, Name, InitM, 'init', []) of
         {ok, {HookSpec, State}} ->
-            %% FIXME: Crash here??
             NHookSpec = resovle_hook_spec(HookSpec, DeftHooks),
             %% TODO: Register Metrics
             {ok, #driver{type = Type,
                          name = Name,
+                         init = InitM,
                          state = State,
                          hookspec = NHookSpec}};
         {error, Reason} ->
@@ -113,33 +125,43 @@ do_init(Name, _Opts, DeftHooks) ->
 pool_spec(Name, Opts)
   when Name =:= python2;
        Name =:= python3 ->
-    ecpool:pool_spec(Name, Name, ?MODULE, [{python, Name} | Opts]);
+    ecpool:pool_spec(Name, Name, ?MODULE, [{python, atom_to_list(Name)} | Opts]);
 
 pool_spec(_, _) ->
     error(not_supported_driver_type).
 
-%% HookSpec = #{hookname() => {callback_m(), callback_f(), spec()}}
-%% DeftHooks = [{hookname, map()}]
-resovle_hook_spec(_HookSpec, _DeftHooks) ->
-    #{client_connected => {main, on_client_connected, #{}}}.
+resovle_hook_spec([], DeftHooks) ->
+    DeftHooks;
+resovle_hook_spec(HookSpec, _) ->
+    Atom = fun(B) -> list_to_atom(B) end,
+    lists:foldr(fun({Name, Module, Func, Spec}, Acc) ->
+        Acc#{Atom(Name) => {Atom(Module), Atom(Func), maps:from_list(Spec)}}
+    end, #{}, HookSpec).
 
 %%--------------------------------------------------------------------
 %% ecpool callback
 %%--------------------------------------------------------------------
 
 -spec connect(list()) -> {ok, pid()} | {error, any()}.
-connect(Opts = [{python, _} | _]) ->
-    python:start(Opts).
+connect(Opts) ->
+    %% [{python, python3}]
+    python:start_link(lists:keydelete(ecpool_worker_id, 1, Opts)).
 
 %%--------------------------------------------------------------------
 %% APIs
 %%--------------------------------------------------------------------
 
--spec run_hook(atom(), list(), driver()) -> ignore | term().
+name(#driver{name = Name}) ->
+    Name.
+
+-spec run_hook(atom(), list(), driver())
+  -> ok
+   | {ok, term()}
+   | {error, term()}.
 run_hook(Name, Args, Driver = #driver{hookspec = HookSpec}) ->
     case maps:get(Name, HookSpec, null) of
         {M, F, Opts} ->
-            case match_topic_filter(Name, maps:get(topic, Args, null), maps:get(topics, Opts, [])) of
+            case match_topic_filter(Name, proplists:get_value(topic, Args, null), maps:get(topics, Opts, [])) of
                 true -> call(M, F, Args, Driver);
                 _ -> ignore
             end;
@@ -158,17 +180,30 @@ match_topic_filter(Name, TopicName, TopicFilter)
 match_topic_filter(_, _, _) ->
     true.
 
--spec call(atom(), atom(), list(), driver()) -> {ok, term()} | {error, term()}.
+-spec call(atom(), atom(), list(), driver()) -> ok | {ok, term()} | {error, term()}.
 call(Mod, Fun, Args, #driver{name = Name, type = Type, state = State}) ->
     with_pool(Name, fun(C) ->
-        %% FIXME: Args?
-        raw_call(Type, C, Mod, Fun, Args#{state => State})
+        do_call(Type, C, Mod, Fun, Args ++ [State])
     end).
 
-raw_call(python, C, M, F, A) ->
-    case python:call(C, M, F, A) of
+raw_call(Type, Name, Mod, Fun, Args) ->
+     with_pool(Name, fun(C) ->
+        do_call(Type, C, Mod, Fun, Args)
+    end).
+
+do_call(python, C, M, F, A) ->
+    case catch python:call(C, M, F, convert_to_low_level(A)) of
+        undefined -> ok;
         {_Ok = 0, Return} -> {ok, Return};
-        {_Err = 1, Reason} -> {error, Reason}
+        {_Err = 1, Reason} -> {error, Reason};
+        {'EXIT', Reason, Stk} ->
+            ?LOG(error, "CALL python ~p:~p(~p), exception: ~p, stacktrace ~0p",
+                        [M, F, A, Reason, Stk]),
+            {error, Reason};
+        _X ->
+            ?LOG(error, "CALL python ~p:~p(~p), unknown return: ~0p",
+                        [M, F, A, _X]),
+            {error, unknown_return_format}
     end.
 
 %%--------------------------------------------------------------------
@@ -181,3 +216,8 @@ with_pool(Name, Fun) ->
 type(python3) -> python;
 type(python2) -> python.
 
+-compile({inline, [convert_to_low_level/1]}).
+convert_to_low_level(Args) when is_map(Args) ->
+    maps:to_list(Args);
+convert_to_low_level(Args) when is_list(Args) ->
+    Args.
