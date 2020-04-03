@@ -54,30 +54,30 @@ set_special_cfgs(emqx_extension_hook) ->
 %%--------------------------------------------------------------------
 
 t_python3(_) ->
-    ok = emqx_extension_hook:on_client_connect(conninfo(), #{}),
-    ok = emqx_extension_hook:on_client_connack(conninfo(), success,#{}),
-    ok = emqx_extension_hook:on_client_connected(clientinfo(), conninfo()),
-    ok = emqx_extension_hook:on_client_disconnected(clientinfo(), takeovered, conninfo()),
+    ok = emqx_extension_hook_handler:on_client_connect(conninfo(), #{}),
+    ok = emqx_extension_hook_handler:on_client_connack(conninfo(), success,#{}),
+    ok = emqx_extension_hook_handler:on_client_connected(clientinfo(), conninfo()),
+    ok = emqx_extension_hook_handler:on_client_disconnected(clientinfo(), takeovered, conninfo()),
     {stop, #{auth_result := success,
-             anonymous := false}} = emqx_extension_hook:on_client_authenticate(clientinfo(), #{auth_result => not_authorised, anonymous => true}),
-    {stop, allow} = emqx_extension_hook:on_client_check_acl(clientinfo(), <<"t/a">>, publish, deny),
-    ok = emqx_extension_hook:on_client_subscribe(clientinfo(), #{}, sub_topicfilters()),
-    ok = emqx_extension_hook:on_client_unsubscribe(clientinfo(), #{}, unsub_topicfilters()),
+             anonymous := false}} = emqx_extension_hook_handler:on_client_authenticate(clientinfo(), #{auth_result => not_authorised, anonymous => true}),
+    {stop, allow} = emqx_extension_hook_handler:on_client_check_acl(clientinfo(), <<"t/a">>, publish, deny),
+    ok = emqx_extension_hook_handler:on_client_subscribe(clientinfo(), #{}, sub_topicfilters()),
+    ok = emqx_extension_hook_handler:on_client_unsubscribe(clientinfo(), #{}, unsub_topicfilters()),
 
-    ok = emqx_extension_hook:on_session_created(clientinfo(), sessinfo()),
-    ok = emqx_extension_hook:on_session_subscribed(clientinfo(), <<"t/a">>, subopts()),
-    ok = emqx_extension_hook:on_session_unsubscribed(clientinfo(), <<"t/a">>, subopts()),
-    ok = emqx_extension_hook:on_session_resumed(clientinfo(), sessinfo()),
-    ok = emqx_extension_hook:on_session_discarded(clientinfo(), sessinfo()),
-    ok = emqx_extension_hook:on_session_takeovered(clientinfo(), sessinfo()),
-    ok = emqx_extension_hook:on_session_terminated(clientinfo(), sockerr, sessinfo()),
+    ok = emqx_extension_hook_handler:on_session_created(clientinfo(), sessinfo()),
+    ok = emqx_extension_hook_handler:on_session_subscribed(clientinfo(), <<"t/a">>, subopts()),
+    ok = emqx_extension_hook_handler:on_session_unsubscribed(clientinfo(), <<"t/a">>, subopts()),
+    ok = emqx_extension_hook_handler:on_session_resumed(clientinfo(), sessinfo()),
+    ok = emqx_extension_hook_handler:on_session_discarded(clientinfo(), sessinfo()),
+    ok = emqx_extension_hook_handler:on_session_takeovered(clientinfo(), sessinfo()),
+    ok = emqx_extension_hook_handler:on_session_terminated(clientinfo(), sockerr, sessinfo()),
 
-    ok = emqx_extension_hook:on_message_publish(sys_message()),
-    {ok, _} = emqx_extension_hook:on_message_publish(message()),
+    ok = emqx_extension_hook_handler:on_message_publish(sys_message()),
+    {ok, _} = emqx_extension_hook_handler:on_message_publish(message()),
 
-    ok = emqx_extension_hook:on_message_dropped(message(), #{}, no_subscriber),
-    ok = emqx_extension_hook:on_message_delivered(clientinfo(), message()),
-    ok = emqx_extension_hook:on_message_acked(clientinfo(), message()).
+    ok = emqx_extension_hook_handler:on_message_dropped(message(), #{}, no_subscriber),
+    ok = emqx_extension_hook_handler:on_message_delivered(clientinfo(), message()),
+    ok = emqx_extension_hook_handler:on_message_acked(clientinfo(), message()).
 
 %%--------------------------------------------------------------------
 %% Generator
