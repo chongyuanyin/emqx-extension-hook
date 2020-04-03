@@ -29,9 +29,6 @@
 all() -> emqx_ct:all(?MODULE).
 
 init_per_suite(Cfg) ->
-    dbg:tracer(),dbg:p(all,call),
-    dbg:tp(python,call,x),
-
     emqx_ct_helpers:start_apps([emqx_extension_hook], fun set_special_cfgs/1),
     Cfg.
 
