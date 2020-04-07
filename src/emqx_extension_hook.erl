@@ -47,12 +47,17 @@ enable(Name, Opts) ->
 
 -spec enable(atom(), list(), list()) -> ok | {error, term()}.
 enable(Name, Opts, DeftHooks) ->
-    case emqx_extension_hook_driver:load(Name, Opts, DeftHooks) of
-        {ok, DriverState} ->
-            save(Name, DriverState);
-        {error, Reason} ->
-            ?LOG(error, "Load driver ~p failed: ~p", [Name, Reason]),
-            {error, Reason}
+    case lists:member(Name, running()) of
+        true ->
+            {error, already_started};
+        _ ->
+            case emqx_extension_hook_driver:load(Name, Opts, DeftHooks) of
+                {ok, DriverState} ->
+                    save(Name, DriverState);
+                {error, Reason} ->
+                    ?LOG(error, "Load driver ~p failed: ~p", [Name, Reason]),
+                    {error, Reason}
+            end
     end.
 
 -spec disable(atom()) -> ok | {error, term()}.

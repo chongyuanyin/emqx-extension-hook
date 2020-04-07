@@ -98,8 +98,6 @@ load(Name, Opts0, DeftHooks) ->
             do_init(Name, InitM, DeftHooks)
     end.
 
-%% FIXME: Does the port will be released??
-
 -spec unload(driver()) -> ok.
 unload(#driver{name = Name, init = InitM}) ->
     do_deinit(Name, InitM),
@@ -155,7 +153,6 @@ incfun(Prefix) ->
     end.
 
 format(#driver{name = Name, init = InitM, hookspec = Hooks}) ->
-    %% Print env???
     io_lib:format("name=~p, init_module=~p, hooks=~0p", [Name, InitM, maps:keys(Hooks)]).
 
 %%--------------------------------------------------------------------

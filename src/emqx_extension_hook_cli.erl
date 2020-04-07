@@ -31,21 +31,16 @@ cli(["drivers", "enable", Name0]) ->
         Name = list_to_atom(Name0),
         case proplists:get_value(Name, application:get_env(?APP, drivers, [])) of
             undefined ->
-                emqx_ctl:print("Not found.~n");
+                emqx_ctl:print("not_found~n");
             Opts ->
                 DeftHooks = emqx_extension_hook_app:parse_hook_rules(Name),
-                emqx_ctl:print("~s~n", [emqx_extension_hook:enable(Name, Opts, DeftHooks)])
+                print(emqx_extension_hook:enable(Name, Opts, DeftHooks))
         end
     end);
 
 cli(["drivers", "disable", Name]) ->
     if_enabled(fun() ->
-        case emqx_extension_hook:disable(list_to_atom(Name)) of
-            ok ->
-                emqx_ctl:print("ok~n");
-            {error, Reason} ->
-                emqx_ctl:print("~s~n", [Reason])
-        end
+        print(emqx_extension_hook:disable(list_to_atom(Name)))
     end);
 
 cli(["drivers", "stats"]) ->
@@ -58,6 +53,13 @@ cli(_) ->
                     {"exhook drivers enable <Name>", "Enable a driver with configurations"},
                     {"exhook drivers disable <Name>", "Disable a driver"},
                     {"exhook drivers stats", "Print drivers statistic"}]).
+
+print(ok) ->
+    emqx_ctl:print("ok~n");
+print({error, Reason}) ->
+    emqx_ctl:print("~p~n", [Reason]);
+print(Term) ->
+    emqx_ctl:print("~p~n", [Term]).
 
 %%--------------------------------------------------------------------
 %% Internal funcs

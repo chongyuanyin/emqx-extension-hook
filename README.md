@@ -1,30 +1,52 @@
-emqx_extension_hook
-========
+# emqx_extension_hook
 
-An EMQ X plugin
+The `emqx_extension_hook` extremly enhance the extensibility for EMQ X. It allow using an others programming language to mount the hooks intead of erlang.
 
-##### emqx_extension_hook.conf
+## Feature
 
-```properties
-exhook.rule.client.connected.1     = {"action": "on_client_connected"}
-exhook.rule.client.disconnected.1  = {"action": "on_client_disconnected"}
-exhook.rule.client.subscribe.1     = {"action": "on_client_subscribe"}
-exhook.rule.client.unsubscribe.1   = {"action": "on_client_unsubscribe"}
-exhook.rule.session.subscribed.1   = {"action": "on_session_subscribed"}
-exhook.rule.session.unsubscribed.1 = {"action": "on_session_unsubscribed"}
-exhook.rule.message.publish.1      = {"action": "on_message_publish"}
-exhook.rule.message.delivered.1    = {"action": "on_message_delivered"}
-exhook.rule.message.acked.1        = {"action": "on_message_acked"}
+- [ ] Support variaty of programming language or web services.
+- [x] Support all hooks of emqx.
+- [x] Allows you to use the return value to extend emqx behavior.
+
+Notes: The current version only support `python` and `java`.
+
+We temporarily no plans to support other languages. Plaease open a issue if you have to use other programming languages.
+
+## Architecture
+
+```
+                            EMQ X
+                            +============================+
+                            |        Extension           |
+ +----------+    CONNECT    | Hooks +----------------+   |
+ |  Device  | <===========> - - - ->|    Drivers     |   |
+ +----------+    PUB/SUB    |       +----------------+   |
+                            |               |            |
+                            +===============|============+
+                                            |
+                                            | Callbacks
+             Third-party Runtimes           |
+             +=======================+      |
+             |  Python Script/ Java  |<-----+
+             |  Classes/ Others      |
+             +=======================+
 ```
 
-License
--------
+## Examples
 
-Apache License Version 2.0
+- Python2/Python3: see `test/main.py`
+- ...
 
-Author
-------
+## Programming Guides
 
-Contributors
-------------
+See `docs/programming_guides.md`
 
+## Beachmark
+
+TODO.
+
+## Reference
+
+- [erlport](https://github.com/hdima/erlport)
+- [Eexternal Term Format](http://erlang.org/doc/apps/erts/erl_ext_dist.html)
+- [The Ports Tutorial of Erlang](http://erlang.org/doc/tutorial/c_port.html)
