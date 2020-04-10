@@ -24,6 +24,7 @@
 
 -export([ start/2
         , stop/1
+        , prep_stop/1
         , parse_hook_rules/1
         ]).
 
@@ -44,10 +45,13 @@ start(_StartType, _StartArgs) ->
     emqx_ctl:register_command(exhook, {emqx_extension_hook_cli, cli}, []),
     {ok, Sup}.
 
-stop(_State) ->
+prep_stop(State) ->
     emqx_ctl:unregister_command(exhook),
-    unload_all_drivers(),
     emqx_extension_hook_handler:unload(),
+    unload_all_drivers(),
+    State.
+
+stop(_State) ->
     ok.
 
 %%--------------------------------------------------------------------
