@@ -18,7 +18,7 @@
 
 -include_lib("emqx/include/logger.hrl").
 
--logger_header("ExHook Driver").
+-logger_header("[ExHook Driver]").
 
 %% Load/Unload
 -export([ load/3
@@ -30,7 +30,9 @@
 -export([run_hook/3]).
 
 %% Infos
--export([name/1]).
+-export([ name/1
+        , format/1
+        ]).
 
 -record(driver, {
           %% Driver name (equal to ecpool name)
@@ -41,6 +43,8 @@
           init :: atom(),
           %% Hook Spec
           hookspec :: hook_spec(),
+          %% Metric fun
+          incfun :: function(),
           %% low layer state
           state
        }).
@@ -90,11 +94,9 @@ load(Name, Opts0, DeftHooks) ->
         false -> {error, not_found_initial_module};
         {value, {_,InitM}, Opts} ->
             Spec = pool_spec(Name, Opts),
-            ok = emqx_extension_hook_sup:start_driver_pool(Spec),
+            {ok, _} = emqx_extension_hook_sup:start_driver_pool(Spec),
             do_init(Name, InitM, DeftHooks)
     end.
-
-%% FIXME: Does the port will be released??
 
 -spec unload(driver()) -> ok.
 unload(#driver{name = Name, init = InitM}) ->
@@ -110,12 +112,15 @@ do_init(Name, InitM, DeftHooks) ->
     case raw_call(Type, Name, InitM, 'init', []) of
         {ok, {HookSpec, State}} ->
             NHookSpec = resovle_hook_spec(HookSpec, DeftHooks),
-            %% TODO: Register Metrics
+            %% Reigster metrics
+            Prefix = "exhook." ++ atom_to_list(Name) ++ ".",
+            metrics_new(Prefix, NHookSpec),
             {ok, #driver{type = Type,
                          name = Name,
                          init = InitM,
                          state = State,
-                         hookspec = NHookSpec}};
+                         hookspec = NHookSpec,
+                         incfun = incfun(Prefix) }};
         {error, Reason} ->
             emqx_extension_hook_sup:stop_driver_pool(Name),
             {error, Reason}
@@ -138,6 +143,18 @@ resovle_hook_spec(HookSpec, _) ->
         Acc#{Atom(Name) => {Atom(Module), Atom(Func), maps:from_list(Spec)}}
     end, #{}, HookSpec).
 
+metrics_new(Prefix, HookSpec) ->
+    Keys = [ list_to_atom(Prefix ++ atom_to_list(K)) || K <- maps:keys(HookSpec)],
+    lists:foreach(fun emqx_metrics:new/1, Keys).
+
+incfun(Prefix) ->
+    fun(Name) ->
+        emqx_metrics:inc(list_to_atom(Prefix ++ atom_to_list(Name)))
+    end.
+
+format(#driver{name = Name, init = InitM, hookspec = Hooks}) ->
+    io_lib:format("name=~p, init_module=~p, hooks=~0p", [Name, InitM, maps:keys(Hooks)]).
+
 %%--------------------------------------------------------------------
 %% ecpool callback
 %%--------------------------------------------------------------------
@@ -158,14 +175,16 @@ name(#driver{name = Name}) ->
   -> ok
    | {ok, term()}
    | {error, term()}.
-run_hook(Name, Args, Driver = #driver{hookspec = HookSpec}) ->
+run_hook(Name, Args, Driver = #driver{hookspec = HookSpec, incfun = IncFun}) ->
     case maps:get(Name, HookSpec, null) of
         {M, F, Opts} ->
             case match_topic_filter(Name, proplists:get_value(topic, Args, null), maps:get(topics, Opts, [])) of
-                true -> call(M, F, Args, Driver);
-                _ -> ignore
+                true ->
+                    IncFun(Name),
+                    call(M, F, Args, Driver);
+                _ -> ok
             end;
-        _ -> ignore
+        _ -> ok
     end.
 
 -compile({inline, [match_topic_filter/3]}).

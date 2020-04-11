@@ -19,57 +19,59 @@
 -behaviour(application).
 
 -include("emqx_extension_hook.hrl").
--include_lib("emqx/include/logger.hrl").
 
 -emqx_plugin(?MODULE).
 
--logger_header("[ExHook App]").
-
 -export([ start/2
         , stop/1
+        , prep_stop/1
+        , parse_hook_rules/1
         ]).
 
--export([drivers/0]).
+%%--------------------------------------------------------------------
+%% Application callbacks
+%%--------------------------------------------------------------------
 
 start(_StartType, _StartArgs) ->
     {ok, Sup} = emqx_extension_hook_sup:start_link(),
 
     %% Load all dirvers
-    load_all_drivers(application:get_env(?APP, drivers, [])),
+    load_all_drivers(),
 
     %% Register all hooks
-    emqx_extension_hook:load(),
+    emqx_extension_hook_handler:load(),
+
+    %% Register CLI
+    emqx_ctl:register_command(exhook, {emqx_extension_hook_cli, cli}, []),
     {ok, Sup}.
 
-stop(_State) ->
+prep_stop(State) ->
+    emqx_ctl:unregister_command(exhook),
+    emqx_extension_hook_handler:unload(),
     unload_all_drivers(),
-    emqx_extension_hook:unload(),
-    ok.
+    State.
 
-drivers() ->
-    Saved = emqx_extension_hook_sup:drivers(),
-    [persistent_term:get({?APP, Name}) || Name <- Saved].
+stop(_State) ->
+    ok.
 
 %%--------------------------------------------------------------------
 %% Internal funcs
 %%--------------------------------------------------------------------
 
+load_all_drivers() ->
+    load_all_drivers(application:get_env(?APP, drivers, [])).
+
 load_all_drivers([]) ->
     ok;
 load_all_drivers([{Name, Opts}|Drivers]) ->
     DeftHooks = parse_hook_rules(Name),
-    case emqx_extension_hook_driver:load(Name, Opts, DeftHooks) of
-        {ok, DriverState} ->
-            persistent_term:put({?APP, Name}, DriverState);
-        {error, Reason} ->
-            ?LOG(error, "Load driver ~p failed: ~p", [Name, Reason])
-    end,
+    ok = emqx_extension_hook:enable(Name, Opts, DeftHooks),
     load_all_drivers(Drivers).
 
 unload_all_drivers() ->
-    [emqx_extension_hook_driver:unload(Name) || Name <- emqx_extension_hook_sup:drivers()],
-    ok.
+    emqx_extension_hook:disable_all().
 
+%% @doc Parse Hookspec from configuratin JSON string
 parse_hook_rules(Name) ->
     RawHooks = proplists:get_value(Name,
                  application:get_env(?APP, hooks, []), #{}),

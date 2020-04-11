@@ -24,9 +24,6 @@
 
 -export([ start_driver_pool/1
         , stop_driver_pool/1
-        , put_drivers/1
-        , rm_drivers/1
-        , drivers/0
         ]).
 
 %%--------------------------------------------------------------------
@@ -36,33 +33,18 @@
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-start_driver_pool(Specs) when is_list(Specs) ->
-    [start_driver_pool(Spec) || Spec <- Specs];
-
-start_driver_pool(Spec = #{id := Name}) ->
-    {ok, _} = supervisor:start_child(?MODULE, Spec),
-    put_drivers(Name).
-
-stop_driver_pool(Name) ->
-    ok = supervisor:terminate_child(?MODULE, Name),
-    ok = supervisor:delete_child(?MODULE, Name),
-    rm_drivers(Name).
-
-put_drivers(Name) ->
-    Saved = persistent_term:get(?MODULE, []),
-    persistent_term:put(?MODULE, lists:reverse([Name | Saved])).
-
-rm_drivers(Name) ->
-    Saved = persistent_term:get(?MODULE, []),
-    persistent_term:put(?MODULE, lists:delete(Name, Saved)).
-
-drivers() ->
-    persistent_term:get(?MODULE, []).
-
-%%--------------------------------------------------------------------
-%%  Callbacks
-%%--------------------------------------------------------------------
-
 init([]) ->
     {ok, {{one_for_one, 10, 100}, []}}.
 
+%%--------------------------------------------------------------------
+%% APIs
+%%--------------------------------------------------------------------
+
+-spec start_driver_pool(map()) -> {ok, pid()} | {error, term()}.
+start_driver_pool(Spec) ->
+    supervisor:start_child(?MODULE, Spec).
+
+-spec stop_driver_pool(atom()) -> ok.
+stop_driver_pool(Name) ->
+    ok = supervisor:terminate_child(?MODULE, Name),
+    ok = supervisor:delete_child(?MODULE, Name).
