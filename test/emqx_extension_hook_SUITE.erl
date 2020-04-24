@@ -59,7 +59,7 @@ reload_plugin_with(_DriverName = java) ->
 
     ErlPortClasses = emqx_ct_helpers:deps_path(erlport, "priv/java/classes"),
     Path = emqx_ct_helpers:deps_path(emqx_extension_hook, "test/scripts"),
-    Drivers = [{java, [{pool_size, 8},
+    Drivers = [{java, [{pool_size, 1},
                        {init_module, 'Main'},
                        {java_path, Path},
                        {call_timeout, 5000}]}],
@@ -78,12 +78,11 @@ reload_plugin_with(_DriverName = java) ->
 
 t_python3(_) ->
 
-    dbg:tracer(),dbg:p(all,call),
-    dbg:tpl(java, call, 5, x),
+    %%dbg:tracer(),dbg:p(all,call),
+    %%dbg:tpl(java, call, 5, x),
     %%dbg:tp(emqx_extension_hook_driver, x),
 
     reload_plugin_with(java),
-
 
     ok = emqx_extension_hook_handler:on_client_connect(conninfo(), #{}),
     ok = emqx_extension_hook_handler:on_client_connack(conninfo(), success,#{}),

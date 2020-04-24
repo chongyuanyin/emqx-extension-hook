@@ -1,17 +1,25 @@
+import java.io.*;
+import java.util.*;
 import erlport.terms.*;
 
-//class State {
-//    Integer times;
-//
-//    public State() {
-//        times = 0;
-//    }
-//
-//    public Integer incr() {
-//        times += 1;
-//        return times;
-//    }
-//}
+class State implements Serializable {
+
+    Integer times;
+
+    public State() {
+        times = 0;
+    }
+
+    public Integer incr() {
+        times += 1;
+        return times;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("State(times: %d)", times);
+    }
+}
 
 public class Main {
 
@@ -19,11 +27,11 @@ public class Main {
         System.err.printf("Initiate driver...\n");
 
         // [{"topics", ["t/#", "t/a"]}]
-        EList topics = new EList();
+        List<Object> topics = new ArrayList<Object>();
         topics.add(new Binary("t/#"));
         topics.add(new Binary("test/#"));
 
-        EList actionOpts  = new EList();
+        List<Object> actionOpts  = new ArrayList<Object>();
         actionOpts.add(Tuple.two(new Atom("topics"), topics));
 
         Object[] actions0 = new Object[] {
@@ -50,11 +58,10 @@ public class Main {
             Tuple.four("message_dropped", "Main", "on_message_dropped", actionOpts)
         };
 
-        EList actions = new EList(actions0);
+        List<Object> actions = new ArrayList<Object>(Arrays.asList(actions0));
 
-        //State state = new State();
-        //EList state = new EList();
-        Tuple state = new Tuple(0);
+        State state = new State();
+        //Tuple state = new Tuple(0);
 
         // {0 | 1, [{HookName, CallModule, CallFunction, Opts}]}
         return Tuple.two(0, Tuple.two(actions, state));
@@ -85,20 +92,13 @@ public class Main {
     public static Object on_client_authenticate(Object clientInfo, Object authresult, Object state) {
         System.err.printf("[Java] on_client_authenticate: clientinfo: %s, authresult: %s, state: %s\n", clientInfo, authresult, state);
 
-        // TODO: optimize?
-        Tuple t = new Tuple(2);
-        t.set(0, 0);
-        t.set(1, new Atom("true"));
-        return t;
+        return Tuple.two(0, true);
     }
 
     public static Object on_client_check_acl(Object clientInfo, Object topic, Object pubsub, Object result, Object state) {
         System.err.printf("[Java] on_client_check_acl: clientinfo: %s, topic: %s, pubsub: %s, result: %s, state: %s\n", clientInfo, topic, pubsub, result, state);
 
-        Tuple t = new Tuple(2);
-        t.set(0, 0);
-        t.set(1, new Atom("true"));
-        return t;
+        return Tuple.two(0, true);
     }
 
     public static void on_client_subscribe(Object clientInfo, Object topic, Object props, Object state) {
