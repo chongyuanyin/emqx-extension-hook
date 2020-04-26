@@ -49,7 +49,7 @@
           state
        }).
 
--type driver_name() :: python2 | python3 | webhook | java | lua | atom().
+-type driver_name() :: python2 | python3 | java | webhook | lua | atom().
 -type driver_type() :: python | webhok | java | atom().
 -type driver() :: #driver{}.
 
@@ -127,20 +127,18 @@ do_init(Name, InitM, DeftHooks) ->
     end.
 
 %% @private
-pool_spec(Name, Opts)
-  when Name =:= python2;
-       Name =:= python3 ->
-    ecpool:pool_spec(Name, Name, ?MODULE, [{python, atom_to_list(Name)} | Opts]);
-
-pool_spec(_, _) ->
-    error(not_supported_driver_type).
+pool_spec(Name, Opts) ->
+    ecpool:pool_spec(Name, Name, ?MODULE, [{name, Name} | Opts]).
 
 resovle_hook_spec([], DeftHooks) ->
     DeftHooks;
 resovle_hook_spec(HookSpec, _) ->
     Atom = fun(B) -> list_to_atom(B) end,
-    lists:foldr(fun({Name, Module, Func, Spec}, Acc) ->
-        Acc#{Atom(Name) => {Atom(Module), Atom(Func), maps:from_list(Spec)}}
+    lists:foldr(
+      fun({Name, Module, Func, Spec}, Acc) ->
+            Acc#{Atom(Name) => {Atom(Module), Atom(Func), maps:from_list(Spec)}};
+         ({Name, Module, Func}, Acc) ->
+            Acc#{Atom(Name) => {Atom(Module), Atom(Func), #{}}}
     end, #{}, HookSpec).
 
 metrics_new(Prefix, HookSpec) ->
@@ -160,9 +158,16 @@ format(#driver{name = Name, init = InitM, hookspec = Hooks}) ->
 %%--------------------------------------------------------------------
 
 -spec connect(list()) -> {ok, pid()} | {error, any()}.
-connect(Opts) ->
-    %% [{python, python3}]
-    python:start_link(lists:keydelete(ecpool_worker_id, 1, Opts)).
+connect(Opts0) ->
+    case lists:keytake(name, 1, lists:keydelete(ecpool_worker_id, 1, Opts0)) of
+        {_,{_, Name}, Opts}
+          when Name =:= python2;
+               Name =:= python3 ->
+            python:start_link([{python, atom_to_list(Name)} | Opts]);
+        {_,{_, Name}, Opts}
+          when Name =:= java ->
+            java:start_link([{java, atom_to_list(Name)} | Opts])
+    end.
 
 %%--------------------------------------------------------------------
 %% APIs
@@ -210,18 +215,19 @@ raw_call(Type, Name, Mod, Fun, Args) ->
         do_call(Type, C, Mod, Fun, Args)
     end).
 
-do_call(python, C, M, F, A) ->
-    case catch python:call(C, M, F, convert_to_low_level(A)) of
+do_call(Type, C, M, F, A) ->
+    case catch apply(Type, call, [C, M, F, convert_to_low_level(A)]) of
+        ok -> ok;
         undefined -> ok;
         {_Ok = 0, Return} -> {ok, Return};
         {_Err = 1, Reason} -> {error, Reason};
         {'EXIT', Reason, Stk} ->
-            ?LOG(error, "CALL python ~p:~p(~p), exception: ~p, stacktrace ~0p",
-                        [M, F, A, Reason, Stk]),
+            ?LOG(error, "CALL ~p ~p:~p(~p), exception: ~p, stacktrace ~0p",
+                        [Type, M, F, A, Reason, Stk]),
             {error, Reason};
         _X ->
-            ?LOG(error, "CALL python ~p:~p(~p), unknown return: ~0p",
-                        [M, F, A, _X]),
+            ?LOG(error, "CALL ~p ~p:~p(~p), unknown return: ~0p",
+                        [Type, M, F, A, _X]),
             {error, unknown_return_format}
     end.
 
@@ -233,7 +239,8 @@ with_pool(Name, Fun) ->
     ecpool:with_client(Name, Fun).
 
 type(python3) -> python;
-type(python2) -> python.
+type(python2) -> python;
+type(Name) -> Name.
 
 -compile({inline, [convert_to_low_level/1]}).
 convert_to_low_level(Args) when is_map(Args) ->
