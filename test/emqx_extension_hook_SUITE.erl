@@ -66,7 +66,7 @@ reload_plugin_with(_DriverName = java) ->
 
     %% Compile it
     ct:pal(os:cmd(lists:concat(["cd ", Path, " && ",
-                                "rm -rf Main.class && ",
+                                "rm -rf Main.class State.class && ",
                                 "javac -cp ", ErlPortClasses, " Main.java"]))),
 
     application:set_env(emqx_extension_hook, drivers, Drivers),
