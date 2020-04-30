@@ -57,7 +57,7 @@ reload_plugin_with(_DriverName = python3) ->
 reload_plugin_with(_DriverName = java) ->
     application:stop(emqx_extension_hook),
 
-    ErlPortClasses = emqx_ct_helpers:deps_path(erlport, "priv/java/classes"),
+    ErlPortJar = emqx_ct_helpers:deps_path(erlport, "priv/java/_pkgs/erlport.jar"),
     Path = emqx_ct_helpers:deps_path(emqx_extension_hook, "test/scripts"),
     Drivers = [{java, [{pool_size, 1},
                        {init_module, 'Main'},
@@ -67,7 +67,7 @@ reload_plugin_with(_DriverName = java) ->
     %% Compile it
     ct:pal(os:cmd(lists:concat(["cd ", Path, " && ",
                                 "rm -rf Main.class State.class && ",
-                                "javac -cp ", ErlPortClasses, " Main.java"]))),
+                                "javac -cp ", ErlPortJar, " Main.java"]))),
 
     application:set_env(emqx_extension_hook, drivers, Drivers),
     application:ensure_all_started(emqx_extension_hook).
@@ -77,13 +77,14 @@ reload_plugin_with(_DriverName = java) ->
 %%--------------------------------------------------------------------
 
 t_python3(_) ->
+    reload_plugin_with(python3),
+    schedule_all_hooks().
 
-    %%dbg:tracer(),dbg:p(all,call),
-    %%dbg:tpl(java, call, 5, x),
-    %%dbg:tp(emqx_extension_hook_driver, x),
-
+t_java(_) ->
     reload_plugin_with(java),
+    schedule_all_hooks().
 
+schedule_all_hooks() ->
     ok = emqx_extension_hook_handler:on_client_connect(conninfo(), #{}),
     ok = emqx_extension_hook_handler:on_client_connack(conninfo(), success,#{}),
     ok = emqx_extension_hook_handler:on_client_connected(clientinfo(), conninfo()),
