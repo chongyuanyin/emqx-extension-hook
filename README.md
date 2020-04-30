@@ -32,18 +32,46 @@ We temporarily no plans to support other languages. Plaease open a issue if you 
              +=======================+
 ```
 
-## Examples
+## Drivers
 
-- Python2/Python3: see `test/main.py`
-- ...
+### Python
 
-## Programming Guides
+***Requirements:***
 
-See `docs/programming_guides.md`
+- It requires the emqx hosted machine has Python2/Python3 Runtimes
+- An executable commands in your shell, i,g: `python2` or `python3`
+
+***Examples:***
+
+See `test/scripts/main.py`
+
+### Java
+
+***Requirements:***
+
+- It requires the emqx hosted machine has Java 8+ Runtimes
+- An executable commands in your shell, i,g: `java`
+
+***Examples:***
+
+See `test/scripts/Main.java`
+
+## Integration Guides
+
+TODO.
 
 ## Beachmark
 
 TODO.
+
+## Known Issues or TODOs
+
+- Provide a High level APIs
+    * High level SDK for all funcs
+    * Packaging Python/Java sources code for developing in IDE
+
+- Configurable Log System.
+    * The Java driver can not redirect the `stderr` stream to erlang vm on Windows platform
 
 ## Reference
 
