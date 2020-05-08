@@ -25,7 +25,6 @@
 -export([ start/2
         , stop/1
         , prep_stop/1
-        , parse_hook_rules/1
         ]).
 
 %%--------------------------------------------------------------------
@@ -64,25 +63,8 @@ load_all_drivers() ->
 load_all_drivers([]) ->
     ok;
 load_all_drivers([{Name, Opts}|Drivers]) ->
-    DeftHooks = parse_hook_rules(Name),
-    ok = emqx_extension_hook:enable(Name, Opts, DeftHooks),
+    ok = emqx_extension_hook:enable(Name, Opts),
     load_all_drivers(Drivers).
 
 unload_all_drivers() ->
     emqx_extension_hook:disable_all().
-
-%% @doc Parse Hookspec from configuratin JSON string
-parse_hook_rules(Name) ->
-    RawHooks = proplists:get_value(Name,
-                 application:get_env(?APP, hooks, []), #{}),
-
-    ParseOpts = fun(#{<<"topics">> := Topics}) when is_list(Topics) ->
-                       #{topics => Topics};
-                   (_) -> #{}
-                end,
-
-    maps:map(fun(_, Spec) ->
-        #{<<"module">> := Module,
-          <<"callback">> := Function} = E = emqx_json:decode(Spec, [return_maps]),
-        {Module, Function, ParseOpts(E)}
-    end, RawHooks).

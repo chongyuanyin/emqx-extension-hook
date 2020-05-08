@@ -23,7 +23,6 @@
 
 %% Mgmt APIs
 -export([ enable/2
-        , enable/3
         , disable/1
         , disable_all/0
         , list/0
@@ -43,15 +42,11 @@ list() ->
 
 -spec enable(atom(), list()) -> ok | {error, term()}.
 enable(Name, Opts) ->
-    enable(Name, Opts, []).
-
--spec enable(atom(), list(), list()) -> ok | {error, term()}.
-enable(Name, Opts, DeftHooks) ->
     case lists:member(Name, running()) of
         true ->
             {error, already_started};
         _ ->
-            case emqx_extension_hook_driver:load(Name, Opts, DeftHooks) of
+            case emqx_extension_hook_driver:load(Name, Opts) of
                 {ok, DriverState} ->
                     save(Name, DriverState);
                 {error, Reason} ->

@@ -47,7 +47,7 @@
 
 ```properties
 ## Driver type
-## 
+##
 ## Exmaples:
 ##   - python2									 --- 仅配置 python3
 ##   - python3, java, webhook    --- 配置多个 Driver
@@ -74,6 +74,7 @@ exhook.rule.python3.client.connected = {"module": "client", "callback": "on_clie
 exhook.rule.python3.message.publish  = {"module": "client", "callback": "on_client_connected", "topics": ["#", "t/#"]}
 ```
 
+***已废弃！！（冗余）***
 
 
 ###  驱动抽象

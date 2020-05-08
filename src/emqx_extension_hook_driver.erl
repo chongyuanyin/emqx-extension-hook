@@ -21,7 +21,7 @@
 -logger_header("[ExHook Driver]").
 
 %% Load/Unload
--export([ load/3
+-export([ load/2
         , unload/1
         , connect/1
         ]).
@@ -88,14 +88,14 @@
 %% Load/Unload APIs
 %%--------------------------------------------------------------------
 
--spec load(atom(), list(), hook_spec()) -> ok | {error, term()} .
-load(Name, Opts0, DeftHooks) ->
+-spec load(atom(), list()) -> ok | {error, term()} .
+load(Name, Opts0) ->
     case lists:keytake(init_module, 1, Opts0) of
         false -> {error, not_found_initial_module};
         {value, {_,InitM}, Opts} ->
             Spec = pool_spec(Name, Opts),
             {ok, _} = emqx_extension_hook_sup:start_driver_pool(Spec),
-            do_init(Name, InitM, DeftHooks)
+            do_init(Name, InitM)
     end.
 
 -spec unload(driver()) -> ok.
@@ -107,11 +107,11 @@ do_deinit(Name, InitM) ->
     _ = raw_call(type(Name), Name, InitM, 'deinit', []),
     ok.
 
-do_init(Name, InitM, DeftHooks) ->
+do_init(Name, InitM) ->
     Type = type(Name),
     case raw_call(Type, Name, InitM, 'init', []) of
         {ok, {HookSpec, State}} ->
-            NHookSpec = resovle_hook_spec(HookSpec, DeftHooks),
+            NHookSpec = resovle_hook_spec(HookSpec),
             %% Reigster metrics
             Prefix = "exhook." ++ atom_to_list(Name) ++ ".",
             metrics_new(Prefix, NHookSpec),
@@ -130,9 +130,7 @@ do_init(Name, InitM, DeftHooks) ->
 pool_spec(Name, Opts) ->
     ecpool:pool_spec(Name, Name, ?MODULE, [{name, Name} | Opts]).
 
-resovle_hook_spec([], DeftHooks) ->
-    DeftHooks;
-resovle_hook_spec(HookSpec, _) ->
+resovle_hook_spec(HookSpec) ->
     Atom = fun(B) -> list_to_atom(B) end,
     lists:foldr(
       fun({Name, Module, Func, Spec}, Acc) ->
