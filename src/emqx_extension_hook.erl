@@ -90,7 +90,7 @@ call_fold(_, _, _, _, []) ->
     ok;
 call_fold(Name, InfoArgs, AccArg, Validator, [NameDriver|More]) ->
     Driver = state(NameDriver),
-    case emqx_extension_hook_driver:run_hook(Name, InfoArgs ++ [AccArg], Driver) of
+    case emqx_extension_hook_driver:run_hook_fold(Name, InfoArgs, AccArg, Driver) of
         ok         -> call_fold(Name, InfoArgs, AccArg, Validator, More);
         {error, _} -> call_fold(Name, InfoArgs, AccArg, Validator, More);
         {ok, NAcc} ->

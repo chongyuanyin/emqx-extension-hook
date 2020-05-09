@@ -47,8 +47,7 @@ set_special_cfgs(emqx_extension_hook) ->
 reload_plugin_with(_DriverName = python3) ->
     application:stop(emqx_extension_hook),
     Path = emqx_ct_helpers:deps_path(emqx_extension_hook, "test/scripts"),
-    Drivers = [{python3, [{pool_size, 8},
-                          {init_module, main},
+    Drivers = [{python3, [{init_module, main},
                           {python_path, Path},
                           {call_timeout, 5000}]}],
     application:set_env(emqx_extension_hook, drivers, Drivers),
@@ -59,8 +58,7 @@ reload_plugin_with(_DriverName = java) ->
 
     ErlPortJar = emqx_ct_helpers:deps_path(erlport, "priv/java/_pkgs/erlport.jar"),
     Path = emqx_ct_helpers:deps_path(emqx_extension_hook, "test/scripts"),
-    Drivers = [{java, [{pool_size, 1},
-                       {init_module, 'Main'},
+    Drivers = [{java, [{init_module, 'Main'},
                        {java_path, Path},
                        {call_timeout, 5000}]}],
 

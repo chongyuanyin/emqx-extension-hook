@@ -27,7 +27,8 @@
         ]).
 
 %% APIs
--export([run_hook/3]).
+-export([ run_hook/3
+        , run_hook_fold/4]).
 
 %% Infos
 -export([ name/1
@@ -53,7 +54,7 @@
 -type driver_type() :: python | webhok | java | atom().
 -type driver() :: #driver{}.
 
--type hook_spec() :: #{hookname() => {callback_m(), callback_f(), spec()}}.
+-type hook_spec() :: #{hookname() => [{callback_m(), callback_f(), spec()}]}.
 -type hookname() :: client_connect
                   | client_connack
                   | client_connected
@@ -128,15 +129,18 @@ do_init(Name, InitM) ->
 
 %% @private
 pool_spec(Name, Opts) ->
-    ecpool:pool_spec(Name, Name, ?MODULE, [{name, Name} | Opts]).
+    NOpts = lists:keystore(pool_size, 1, Opts, {pool_size, 1}),
+    ecpool:pool_spec(Name, Name, ?MODULE, [{name, Name} | NOpts]).
 
 resovle_hook_spec(HookSpec) ->
     Atom = fun(B) -> list_to_atom(B) end,
     lists:foldr(
       fun({Name, Module, Func, Spec}, Acc) ->
-            Acc#{Atom(Name) => {Atom(Module), Atom(Func), maps:from_list(Spec)}};
+            NameAtom = Atom(Name),
+            Acc#{NameAtom => [{Atom(Module), Atom(Func), maps:from_list(Spec)} | maps:get(NameAtom, Acc, [])]};
          ({Name, Module, Func}, Acc) ->
-            Acc#{Atom(Name) => {Atom(Module), Atom(Func), #{}}}
+            NameAtom = Atom(Name),
+            Acc#{NameAtom => [{Atom(Module), Atom(Func), #{}} | maps:get(NameAtom, Acc, [])]}
     end, #{}, HookSpec).
 
 metrics_new(Prefix, HookSpec) ->
@@ -179,15 +183,35 @@ name(#driver{name = Name}) ->
    | {ok, term()}
    | {error, term()}.
 run_hook(Name, Args, Driver = #driver{hookspec = HookSpec, incfun = IncFun}) ->
-    case maps:get(Name, HookSpec, null) of
-        {M, F, Opts} ->
-            case match_topic_filter(Name, proplists:get_value(topic, Args, null), maps:get(topics, Opts, [])) of
-                true ->
-                    IncFun(Name),
-                    call(M, F, Args, Driver);
-                _ -> ok
-            end;
-        _ -> ok
+    case maps:get(Name, HookSpec, []) of
+        [] -> ok;
+        Cbs ->
+            lists:foldl(fun({M, F, Opts}, _) ->
+                case match_topic_filter(Name, proplists:get_value(topic, Args, null), maps:get(topics, Opts, [])) of
+                    true ->
+                        IncFun(Name),
+                        call(M, F, Args, Driver);
+                    _ -> ok
+                end
+            end, ok, Cbs)
+    end.
+
+-spec run_hook_fold(atom(), list(), any(), driver())
+  -> ok
+   | {ok, term()}
+   | {error, term()}.
+run_hook_fold(Name, Args, Acc0, Driver = #driver{hookspec = HookSpec, incfun = IncFun}) ->
+    case maps:get(Name, HookSpec, []) of
+        [] -> ok;
+        Cbs ->
+            lists:foldl(fun({M, F, Opts}, Acc) ->
+                case match_topic_filter(Name, proplists:get_value(topic, Args, null), maps:get(topics, Opts, [])) of
+                    true ->
+                        IncFun(Name),
+                        call(M, F, Args ++ [Acc], Driver);
+                    _ -> ok
+                end
+            end, Acc0, Cbs)
     end.
 
 -compile({inline, [match_topic_filter/3]}).
