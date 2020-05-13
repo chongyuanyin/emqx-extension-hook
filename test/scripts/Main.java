@@ -101,12 +101,12 @@ public class Main {
         return Tuple.two(0, true);
     }
 
-    public static void on_client_subscribe(Object clientInfo, Object topic, Object props, Object state) {
-        System.err.printf("[Java] on_client_subscribe: clientinfo: %s, topic: %s, props: %s, state: %s\n", clientInfo, topic, props, state);
+    public static void on_client_subscribe(Object clientInfo, Object props, Object topic, Object state) {
+        System.err.printf("[Java] on_client_subscribe: clientinfo: %s, props: %s, topic: %s, state: %s\n", clientInfo, props, topic, state);
     }
 
-    public static void on_client_unsubscribe(Object clientInfo, Object topic, Object props, Object state) {
-        System.err.printf("[Java] on_client_unsubscribe: clientinfo: %s, topic: %s, props: %s, state: %s\n", clientInfo, topic, props, state);
+    public static void on_client_unsubscribe(Object clientInfo, Object props, Object topic, Object state) {
+        System.err.printf("[Java] on_client_unsubscribe: clientinfo: %s, props: %s, topic: %s, state: %s\n", clientInfo, props, topic, state);
     }
 
     // Sessions
