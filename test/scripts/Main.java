@@ -116,7 +116,7 @@ public class Main {
     }
 
     public static void on_session_subscribed(Object clientInfo, Object topic, Object opts, Object state) {
-        System.err.printf("[Java] on_session_subscribed: clientinfo: %s, topic: %s, state: %s\n", clientInfo, topic, state);
+        System.err.printf("[Java] on_session_subscribed: clientinfo: %s, topic: %s, subopts: %s, state: %s\n", clientInfo, topic, opts, state);
     }
 
     public static void on_session_unsubscribed(Object clientInfo, Object topic, Object state) {
