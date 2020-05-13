@@ -99,7 +99,6 @@ def on_session_unsubscribed(clientinfo, topic, state):
     return
 
 def on_session_resumed(clientinfo, state):
-    ## Node?
     print("on_session_resumed: clientinfo: {0}, state: {1}".format(clientinfo, state))
     return
 

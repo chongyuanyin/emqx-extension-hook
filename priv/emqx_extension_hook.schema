@@ -23,15 +23,13 @@
     Atom = fun(S) -> list_to_atom(S) end,
 
     Python = fun(Prefix) ->
-               [{pool_size, Integer(cuttlefish:conf_get(Prefix ++ ".pool_size", Conf, "8"))},  %% ecpool
-                {init_module, Atom(cuttlefish:conf_get(Prefix ++ ".init_module", Conf, "main"))}, %% dirver
+               [{init_module, Atom(cuttlefish:conf_get(Prefix ++ ".init_module", Conf, "main"))}, %% dirver
                 {python_path, cuttlefish:conf_get(Prefix ++ ".path", Conf, undefined)},
                 {call_timeout, Duration(cuttlefish:conf_get(Prefix ++ ".call_timeout", Conf, "5s"))}]
             end,
 
     Java = fun(Prefix) ->
-             [{pool_size, Integer(cuttlefish:conf_get(Prefix ++ ".pool_size", Conf, "8"))},  %% ecpool
-              {init_module, Atom(cuttlefish:conf_get(Prefix ++ ".init_module", Conf, "Main"))}, %% dirver
+             [{init_module, Atom(cuttlefish:conf_get(Prefix ++ ".init_module", Conf, "Main"))}, %% dirver
               {java_path, cuttlefish:conf_get(Prefix ++ ".path", Conf, undefined)},
               {call_timeout, Duration(cuttlefish:conf_get(Prefix ++ ".call_timeout", Conf, "5s"))}]
            end,
