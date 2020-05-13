@@ -95,8 +95,8 @@ public class Main {
         return Tuple.two(0, true);
     }
 
-    public static Object on_client_check_acl(Object clientInfo, Object topic, Object pubsub, Object result, Object state) {
-        System.err.printf("[Java] on_client_check_acl: clientinfo: %s, topic: %s, pubsub: %s, result: %s, state: %s\n", clientInfo, topic, pubsub, result, state);
+    public static Object on_client_check_acl(Object clientInfo, Object pubsub, Object topic, Object result, Object state) {
+        System.err.printf("[Java] on_client_check_acl: clientinfo: %s, pubsub: %s, topic: %s, result: %s, state: %s\n", clientInfo, pubsub, topic, result, state);
 
         return Tuple.two(0, true);
     }

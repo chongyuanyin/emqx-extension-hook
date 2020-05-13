@@ -157,7 +157,7 @@ deinit() -> any().
 | client_connected     | `clientinfo`<br />                                    | -         |
 | client_disconnected  | `clientinfo`<br />`reason`                            | -         |
 | client_authenticate  | `clientinfo`<br />`result`                            | `result`  |
-| client_check_acl     | `clientinfo`<br />`topic`<br />`pubsub`<br />`result` | `result`  |
+| client_check_acl     | `clientinfo`<br />`pubsub`<br />`topic`<br />`result` | `result`  |
 | client_subscribe     | `clientinfo`<br />`props`<br />`topicfilters`         | -         |
 | client_unsubscribe   | `clientinfo`<br />`props`<br />`topicfilters`         | -         |
 | session_created      | `clientinfo`                                          | -         |

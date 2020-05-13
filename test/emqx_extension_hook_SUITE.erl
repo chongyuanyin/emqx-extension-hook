@@ -89,7 +89,7 @@ schedule_all_hooks() ->
     ok = emqx_extension_hook_handler:on_client_disconnected(clientinfo(), takeovered, conninfo()),
     {stop, #{auth_result := success,
              anonymous := false}} = emqx_extension_hook_handler:on_client_authenticate(clientinfo(), #{auth_result => not_authorised, anonymous => true}),
-    {stop, allow} = emqx_extension_hook_handler:on_client_check_acl(clientinfo(), <<"t/a">>, publish, deny),
+    {stop, allow} = emqx_extension_hook_handler:on_client_check_acl(clientinfo(), publish, <<"t/a">>, deny),
     ok = emqx_extension_hook_handler:on_client_subscribe(clientinfo(), #{}, sub_topicfilters()),
     ok = emqx_extension_hook_handler:on_client_unsubscribe(clientinfo(), #{}, unsub_topicfilters()),
 
