@@ -39,3 +39,39 @@ SDK 的目的在于方便用户使用 IDE 集成开发、和模拟调试。
 1. 应能方便用户能在 IDE 中进行，集成和开发
 2. 应提供集成测试用的模拟代码。
    - 例如，生成模拟的数据，发送至用户的程序，方便直接断点调试
+
+
+### 部署结构
+
+#### 代码依赖结构
+
+从部署的角度看，代码的依赖关系为：
+
+1. 用户代码：
+    * 一定会依赖 SDK
+    * 可能会依赖 某个位置的三方/系统库
+2. SDK 代码：
+    * 只能依赖 erlport
+3. 基础通信库
+    * 无依赖
+
+#### 部署
+
+从文件存放的位置来看，一个标准的部署结构为：
+
+```
+emqx
+|
+|--- data
+|------- extension
+|---------- <some-sdk-package-name>
+|--------------- <some-classes/scripts-in-sdk>
+|---------- <user's classes/scripts>
+|
+|---------- <another-sdk-package-name>
+|--------------- <some-classes/scripts-in-sdk>
+|---------- <user's classes/scripts>
+```
+
+它表达了：在 `data/extension` 目录下安装了两个 SDK，并且用户都基于 SDK 编写了其回调的代码模块。
+

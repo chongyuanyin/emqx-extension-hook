@@ -262,8 +262,10 @@ maybe(undefined) -> <<"">>;
 maybe(B) -> B.
 
 %% @private
-stringfy(Term) when is_atom(Term); is_binary(Term) ->
+stringfy(Term) when is_binary(Term) ->
     Term;
+stringfy(Term) when is_atom(Term) ->
+    atom_to_binary(Term, utf8);
 stringfy(Term) when is_tuple(Term) ->
     iolist_to_binary(io_lib:format("~p", [Term])).
 
