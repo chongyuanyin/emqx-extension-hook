@@ -133,10 +133,10 @@ on_client_authenticate(ClientInfo, AuthResult) ->
             {ok, AuthResult}
     end.
 
-on_client_check_acl(ClientInfo, Topic, PubSub, Result) ->
+on_client_check_acl(ClientInfo, PubSub, Topic, Result) ->
     AccArg = Result == allow,
     Name   = 'client_check_acl',
-    case call_fold(Name, [clientinfo(ClientInfo), Topic, PubSub], AccArg, validator(Name)) of
+    case call_fold(Name, [clientinfo(ClientInfo), PubSub, Topic], AccArg, validator(Name)) of
         {stop, Bool} when is_boolean(Bool) ->
             NResult = case Bool of true -> allow; _ -> deny end,
             {stop, NResult};
@@ -262,8 +262,10 @@ maybe(undefined) -> <<"">>;
 maybe(B) -> B.
 
 %% @private
-stringfy(Term) when is_atom(Term); is_binary(Term) ->
+stringfy(Term) when is_binary(Term) ->
     Term;
+stringfy(Term) when is_atom(Term) ->
+    atom_to_binary(Term, utf8);
 stringfy(Term) when is_tuple(Term) ->
     iolist_to_binary(io_lib:format("~p", [Term])).
 
