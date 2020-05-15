@@ -95,18 +95,18 @@ public class Main {
         return Tuple.two(0, true);
     }
 
-    public static Object on_client_check_acl(Object clientInfo, Object topic, Object pubsub, Object result, Object state) {
-        System.err.printf("[Java] on_client_check_acl: clientinfo: %s, topic: %s, pubsub: %s, result: %s, state: %s\n", clientInfo, topic, pubsub, result, state);
+    public static Object on_client_check_acl(Object clientInfo, Object pubsub, Object topic, Object result, Object state) {
+        System.err.printf("[Java] on_client_check_acl: clientinfo: %s, pubsub: %s, topic: %s, result: %s, state: %s\n", clientInfo, pubsub, topic, result, state);
 
         return Tuple.two(0, true);
     }
 
-    public static void on_client_subscribe(Object clientInfo, Object topic, Object props, Object state) {
-        System.err.printf("[Java] on_client_subscribe: clientinfo: %s, topic: %s, props: %s, state: %s\n", clientInfo, topic, props, state);
+    public static void on_client_subscribe(Object clientInfo, Object props, Object topic, Object state) {
+        System.err.printf("[Java] on_client_subscribe: clientinfo: %s, props: %s, topic: %s, state: %s\n", clientInfo, props, topic, state);
     }
 
-    public static void on_client_unsubscribe(Object clientInfo, Object topic, Object props, Object state) {
-        System.err.printf("[Java] on_client_unsubscribe: clientinfo: %s, topic: %s, props: %s, state: %s\n", clientInfo, topic, props, state);
+    public static void on_client_unsubscribe(Object clientInfo, Object props, Object topic, Object state) {
+        System.err.printf("[Java] on_client_unsubscribe: clientinfo: %s, props: %s, topic: %s, state: %s\n", clientInfo, props, topic, state);
     }
 
     // Sessions
@@ -116,7 +116,7 @@ public class Main {
     }
 
     public static void on_session_subscribed(Object clientInfo, Object topic, Object opts, Object state) {
-        System.err.printf("[Java] on_session_subscribed: clientinfo: %s, topic: %s, state: %s\n", clientInfo, topic, state);
+        System.err.printf("[Java] on_session_subscribed: clientinfo: %s, topic: %s, subopts: %s, state: %s\n", clientInfo, topic, opts, state);
     }
 
     public static void on_session_unsubscribed(Object clientInfo, Object topic, Object state) {

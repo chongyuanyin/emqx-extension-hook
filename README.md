@@ -19,7 +19,7 @@ We temporarily no plans to support other languages. Plaease open a issue if you 
                             +============================+
                             |        Extension           |
  +----------+    CONNECT    | Hooks +----------------+   |
- |  Device  | <===========> - - - ->|    Drivers     |   |
+ |  Client  | <===========> - - - ->|    Drivers     |   |
  +----------+    PUB/SUB    |       +----------------+   |
                             |               |            |
                             +===============|============+
@@ -56,13 +56,25 @@ See `test/scripts/main.py`
 
 See `test/scripts/Main.java`
 
+## Configurations
+
+| Name                | Data Type | Options                               | Default          | Description                      |
+| ------------------- | --------- | ------------------------------------- | ---------------- | -------------------------------- |
+| drivers             | Enum      | `python2`<br /> `python3`<br />`java` | `python3`        | Drivers type                     |
+| <type>.path         | String    | -                                     | `data/extension` | The codes/library search path    |
+| <type>.call_timeout | Duration  | -                                     | `5s`             | Function call timeout            |
+| <type>.pool_size    | Integer   | -                                     | `8`              | The pool size for the driver     |
+| <type>.init_module  | String    | -                                     | main             | The module name for initial call |
+
+
 ## Integration Guides
 
-TODO.
+- Python: todo...
+- Java: todo...
 
 ## Beachmark
 
-TODO.
+- TODOs
 
 ## Known Issues or TODOs
 

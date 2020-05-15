@@ -33,8 +33,7 @@ cli(["drivers", "enable", Name0]) ->
             undefined ->
                 emqx_ctl:print("not_found~n");
             Opts ->
-                DeftHooks = emqx_extension_hook_app:parse_hook_rules(Name),
-                print(emqx_extension_hook:enable(Name, Opts, DeftHooks))
+                print(emqx_extension_hook:enable(Name, Opts))
         end
     end);
 

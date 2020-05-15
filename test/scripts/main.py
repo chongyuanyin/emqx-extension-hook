@@ -70,17 +70,17 @@ def on_client_authenticate(clientinfo, authresult, state):
     ## True / False
     return (OK, True)
 
-def on_client_check_acl(clientinfo, topic, pubsub, result, state):
-    print("on_client_check_acl: clientinfo: {0}, topic: {1}, pubsub: {2}, result: {3}, state: {4}".format(clientinfo, topic, pubsub, result, state))
+def on_client_check_acl(clientinfo, pubsub, topic, result, state):
+    print("on_client_check_acl: clientinfo: {0}, pubsub: {1}, topic: {2}, result: {3}, state: {4}".format(clientinfo, pubsub, topic, result, state))
     ## True / False
     return (OK, True)
 
-def on_client_subscribe(clientinfo, topics, props, state):
-    print("on_client_subscribe: clientinfo: {0}, topics: {1}, props: {2}, state: {3}".format(clientinfo, topics, props, state))
+def on_client_subscribe(clientinfo, props, topics, state):
+    print("on_client_subscribe: clientinfo: {0}, props: {1}, topics: {2}, state: {3}".format(clientinfo, props, topics, state))
     return
 
-def on_client_unsubscribe(clientinfo, topics, props, state):
-    print("on_client_unsubscribe: clientinfo: {0}, topics: {1}, props: {2}, state: {3}".format(clientinfo, topics, props, state))
+def on_client_unsubscribe(clientinfo, props, topics, state):
+    print("on_client_unsubscribe: clientinfo: {0}, props: {1}, topics: {2}, state: {3}".format(clientinfo, props, topics, state))
     return
 
 ##--------------------------------------------------------------------
@@ -99,7 +99,6 @@ def on_session_unsubscribed(clientinfo, topic, state):
     return
 
 def on_session_resumed(clientinfo, state):
-    ## Node?
     print("on_session_resumed: clientinfo: {0}, state: {1}".format(clientinfo, state))
     return
 
