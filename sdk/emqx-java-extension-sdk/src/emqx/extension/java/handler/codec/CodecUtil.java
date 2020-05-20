@@ -1,4 +1,4 @@
-package java.extension.handler.codec;
+package emqx.extension.java.handler.codec;
 
 import erlport.terms.Atom;
 import erlport.terms.Binary;

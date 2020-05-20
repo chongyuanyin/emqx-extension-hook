@@ -1,4 +1,4 @@
-package java.extension.handler;
+package emqx.extension.java.handler;
 
 import erlport.terms.Tuple;
 

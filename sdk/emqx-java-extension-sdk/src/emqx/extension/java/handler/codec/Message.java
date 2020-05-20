@@ -1,4 +1,4 @@
-package java.extension.handler.codec;
+package emqx.extension.java.handler.codec;
 
 import java.math.BigInteger;
 import java.util.ArrayList;

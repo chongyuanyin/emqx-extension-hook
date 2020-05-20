@@ -1,12 +1,12 @@
-package java.extension.handler.codec;
+package emqx.extension.java.handler.codec;
 
-import java.extension.exceptions.InvalidParameterException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import emqx.extension.java.exceptions.InvalidParameterException;
 import erlport.terms.Tuple;
 
 public class Decoder {
@@ -359,7 +359,7 @@ public class Decoder {
 		}
 	}
 	
-//	public static void main (String args[]) throws Exception {
+	public static void main (String args[]) throws Exception {
 //		BigInteger obj = BigInteger.valueOf(1589611640710l);
 //		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 //        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
@@ -371,6 +371,9 @@ public class Decoder {
 //        for (byte b : bytes) {
 //        		System.out.print(b + " ");
 //        }
-//	}
+		Decoder decoder = new Decoder();
+		List<Object> list = new ArrayList<Object>();
+		List<Property> props = decoder.decodeList(Property.class, list);
+	}
 	
 }

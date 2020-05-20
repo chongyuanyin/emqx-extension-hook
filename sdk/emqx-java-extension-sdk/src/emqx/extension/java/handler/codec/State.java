@@ -1,7 +1,8 @@
-package java.extension.handler.codec;
+package emqx.extension.java.handler.codec;
 
-import java.extension.exceptions.InvalidParameterException;
 import java.io.Serializable;
+
+import emqx.extension.java.exceptions.InvalidParameterException;
 
 public class State implements Serializable {
 

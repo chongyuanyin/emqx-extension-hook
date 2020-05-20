@@ -1,17 +1,17 @@
-package java.extension.handler.codec;
+package emqx.extension.java.handler.codec;
 
-public class ReturnCode implements HandlerParameter {
+public class Topic implements HandlerParameter {
 	
-	public final String value;		//Atom
+	public final String value;		//Binary
 	
-	public ReturnCode(String value) {
+	public Topic(String value) {
 		this.value = value;
 	}
 	
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("ReturnCode (");
+		sb.append("Topic (");
 		sb.append("value=" + value);
 		sb.append(")");
 		
@@ -21,11 +21,11 @@ public class ReturnCode implements HandlerParameter {
 //	@Override
 //	public HandlerParameter parse(Object object) throws InvalidParameterException {
 //		try {
-//			String value = CodecUtil.atom2String(object);
-//			return new ReturnCode(value);
+//			String value = CodecUtil.binary2String(object);
+//			return new Topic(value);
 //			
 //		} catch (Exception e) {
-//			String error = MessageFormat.format("Invalid ReturnCode: {0}", object);
+//			String error = MessageFormat.format("Invalid Topic: {0}", object);
 //			throw new InvalidParameterException(error);
 //		}
 //	}

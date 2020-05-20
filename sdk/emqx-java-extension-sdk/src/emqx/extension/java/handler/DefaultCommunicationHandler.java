@@ -1,29 +1,29 @@
-package java.extension.handler;
+package emqx.extension.java.handler;
 
-import java.extension.exceptions.InvalidParameterException;
-import java.extension.handler.codec.ActionOption;
-import java.extension.handler.codec.ClientInfo;
-import java.extension.handler.codec.ConnInfo;
-import java.extension.handler.codec.Decoder;
-import java.extension.handler.codec.HookSpec;
-import java.extension.handler.codec.Initializer;
-import java.extension.handler.codec.Message;
-import java.extension.handler.codec.Property;
-import java.extension.handler.codec.PubSub;
-import java.extension.handler.codec.Reason;
-import java.extension.handler.codec.Result;
-import java.extension.handler.codec.ResultCode;
-import java.extension.handler.codec.ReturnCode;
-import java.extension.handler.codec.State;
-import java.extension.handler.codec.SubscribeOption;
-import java.extension.handler.codec.Topic;
-import java.extension.handler.codec.TopicFilter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import emqx.extension.java.exceptions.InvalidParameterException;
+import emqx.extension.java.handler.codec.ActionOption;
+import emqx.extension.java.handler.codec.ClientInfo;
+import emqx.extension.java.handler.codec.ConnInfo;
+import emqx.extension.java.handler.codec.Decoder;
+import emqx.extension.java.handler.codec.HookSpec;
+import emqx.extension.java.handler.codec.Initializer;
+import emqx.extension.java.handler.codec.Message;
+import emqx.extension.java.handler.codec.Property;
+import emqx.extension.java.handler.codec.PubSub;
+import emqx.extension.java.handler.codec.Reason;
+import emqx.extension.java.handler.codec.Result;
+import emqx.extension.java.handler.codec.ResultCode;
+import emqx.extension.java.handler.codec.ReturnCode;
+import emqx.extension.java.handler.codec.State;
+import emqx.extension.java.handler.codec.SubscribeOption;
+import emqx.extension.java.handler.codec.Topic;
+import emqx.extension.java.handler.codec.TopicFilter;
 import erlport.terms.Tuple;
 
 public class DefaultCommunicationHandler implements CommunicationHandler {
@@ -99,9 +99,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
     		try {
     			ConnInfo connInfo = decoder.decode(ConnInfo.class, connInfoObj);
     			List<Property> props = decoder.decodeList(Property.class, propsObj);
-        		State state = (State) stateObj;
         	
-        		on_client_connect(connInfo, props.toArray(new Property[props.size()]), state);
+        		on_client_connect(connInfo, props.toArray(new Property[props.size()]));
         		
     		} catch (InvalidParameterException e) {
     			e.printStackTrace(System.err);
@@ -113,9 +112,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 			ConnInfo connInfo = decoder.decode(ConnInfo.class, connInfoObj);
 			ReturnCode rc = decoder.decode(ReturnCode.class, rcObj);
 	    		List<Property> props = decoder.decodeList(Property.class, propsObj);
-	    		State state = (State) stateObj;
 	    	
-	    		on_client_connack(connInfo, rc, props.toArray(new Property[props.size()]), state);
+	    		on_client_connack(connInfo, rc, props.toArray(new Property[props.size()]));
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -125,9 +123,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
     public void on_client_connected_raw(Object clientInfoObj, Object stateObj) {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
-	    		State state = (State) stateObj;
 	    	
-	    		on_client_connected(clientInfo, state);
+	    		on_client_connected(clientInfo);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -138,9 +135,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
 			Reason reason = decoder.decode(Reason.class, reasonObj);
-	    		State state = (State) stateObj;
 	    	
-	    		on_client_disconnected(clientInfo, reason, state);
+	    		on_client_disconnected(clientInfo, reason);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -151,14 +147,13 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 		try {
 			ClientInfo clientInfo =decoder.decode(ClientInfo.class, clientInfoObj);
 			boolean authresult = (Boolean) authresultObj;
-	    		State state = (State) stateObj;
 	    	
-	    		Result result = on_client_authenticate(clientInfo, authresult, state);
-	    		return result.encode(ResultCode.SUC);
+	    		boolean result = on_client_authenticate(clientInfo, authresult);
+	    		return Tuple.two(ResultCode.SUC.getValue(), result);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
-			return new Result(false).encode(ResultCode.FAIL);
+			return Tuple.two(ResultCode.FAIL.getValue(), false);
 		}
     }
 
@@ -168,14 +163,13 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 			PubSub pubsub = decoder.decode(PubSub.class, pubsubObj);
 			Topic topic = decoder.decode(Topic.class, topicObj);
 			boolean rs = (Boolean) resultObj;
-	    		State state = (State) stateObj;
 	    	
-	    		Result result = on_client_check_acl(clientInfo, pubsub, topic, rs, state);
-	    		return result.encode(ResultCode.SUC);
+	    		boolean result = on_client_check_acl(clientInfo, pubsub, topic, rs);
+	    		return Tuple.two(ResultCode.SUC.getValue(), result);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
-			return new Result(false).encode(ResultCode.FAIL);
+			return Tuple.two(ResultCode.FAIL.getValue(), false);
 		}
     }
 
@@ -184,10 +178,9 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
 			List<Property> props = decoder.decodeList(Property.class, propsObj);
 			List<TopicFilter> topicFilters = decoder.decodeList(TopicFilter.class, topicObj);
-			State state = (State) stateObj;
 	    	
 			on_client_subscribe(clientInfo, props.toArray(new Property[props.size()]), 
-					topicFilters.toArray(new TopicFilter[topicFilters.size()]), state);
+					topicFilters.toArray(new TopicFilter[topicFilters.size()]));
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -199,10 +192,9 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
 			List<Property> props = decoder.decodeList(Property.class, propsObj);
 			List<TopicFilter> topicFilters = decoder.decodeList(TopicFilter.class, topicObj);
-			State state = (State) stateObj;
 	    	
 			on_client_unsubscribe(clientInfo, props.toArray(new Property[props.size()]), 
-					topicFilters.toArray(new TopicFilter[topicFilters.size()]), state);
+					topicFilters.toArray(new TopicFilter[topicFilters.size()]));
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -213,9 +205,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
     public void on_session_created_raw(Object clientInfoObj, Object stateObj) {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
-			State state = (State) stateObj;
 	    	
-			on_session_created(clientInfo, state);
+			on_session_created(clientInfo);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -227,9 +218,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
 			Topic topic = decoder.decode(Topic.class, topicObj);
 			SubscribeOption opts = decoder.decode(SubscribeOption.class, optsObj);
-			State state = (State) stateObj;
 	    	
-			on_session_subscribed(clientInfo, topic, opts, state);
+			on_session_subscribed(clientInfo, topic, opts);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -240,9 +230,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
 			Topic topic = decoder.decode(Topic.class, topicObj);
-			State state = (State) stateObj;
 	    	
-			on_session_unsubscribed(clientInfo, topic, state);
+			on_session_unsubscribed(clientInfo, topic);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -252,9 +241,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
     public void on_session_resumed_raw(Object clientInfoObj, Object stateObj) {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
-			State state = (State) stateObj;
 	    	
-			on_session_resumed(clientInfo, state);
+			on_session_resumed(clientInfo);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -264,9 +252,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
     public void on_session_discarded_raw(Object clientInfoObj, Object stateObj) {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
-			State state = (State) stateObj;
 	    	
-			on_session_discarded(clientInfo, state);
+			on_session_discarded(clientInfo);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -276,9 +263,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
     public void on_session_takeovered_raw(Object clientInfoObj, Object stateObj) {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
-			State state = (State) stateObj;
 	    	
-			on_session_takeovered(clientInfo, state);
+			on_session_takeovered(clientInfo);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -289,9 +275,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
 			Reason reason = decoder.decode(Reason.class, reasonObj);
-			State state = (State) stateObj;
 	    	
-			on_session_terminated(clientInfo, reason, state);
+			on_session_terminated(clientInfo, reason);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -302,9 +287,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
     public Object on_message_publish_raw(Object messageObj, Object stateObj) {
 		try {
 			Message message = decoder.decode(Message.class, messageObj);
-			State state = (State) stateObj;
 	    	
-			Message result = on_message_publish(message, state);
+			Message result = on_message_publish(message);
 			return result.encode(ResultCode.SUC);
 	    		
 		} catch (InvalidParameterException e) {
@@ -317,9 +301,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 		try {
 			Message message = decoder.decode(Message.class, messageObj);
 			Reason reason = decoder.decode(Reason.class, reasonObj);
-			State state = (State) stateObj;
 	    	
-			on_message_dropped(message, reason, state);
+			on_message_dropped(message, reason);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -330,9 +313,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
 			Message message = decoder.decode(Message.class, messageObj);
-			State state = (State) stateObj;
 	    	
-			on_message_delivered(clientInfo, message, state);
+			on_message_delivered(clientInfo, message);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -343,9 +325,8 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
 		try {
 			ClientInfo clientInfo = decoder.decode(ClientInfo.class, clientInfoObj);
 			Message message = decoder.decode(Message.class, messageObj);
-			State state = (State) stateObj;
 	    	
-			on_message_acked(clientInfo, message, state);
+			on_message_acked(clientInfo, message);
 	    		
 		} catch (InvalidParameterException e) {
 			e.printStackTrace(System.err);
@@ -357,66 +338,66 @@ public class DefaultCommunicationHandler implements CommunicationHandler {
     /* Overriden callbacks start */
 	
 	// Clients
-    public void on_client_connect(ConnInfo connInfo, Property[] props, State state) {
+    public void on_client_connect(ConnInfo connInfo, Property[] props) {
     }
 
-    public void on_client_connack(ConnInfo connInfo, ReturnCode rc, Property[] props, State state) {
+    public void on_client_connack(ConnInfo connInfo, ReturnCode rc, Property[] props) {
     }
 
-    public void on_client_connected(ClientInfo clientInfo, State state) {
+    public void on_client_connected(ClientInfo clientInfo) {
     }
 
-    public void on_client_disconnected(ClientInfo clientInfo, Reason reason, State state) {
+    public void on_client_disconnected(ClientInfo clientInfo, Reason reason) {
     }
 
-    public Result on_client_authenticate(ClientInfo clientInfo, boolean authresult, State state) {
-        return new Result(true);
+    public boolean on_client_authenticate(ClientInfo clientInfo, boolean authresult) {
+        return true;
     }
 
-    public Result on_client_check_acl(ClientInfo clientInfo, PubSub pubsub, Topic topic, boolean result, State state) {
-        return new Result(true);
+    public boolean on_client_check_acl(ClientInfo clientInfo, PubSub pubsub, Topic topic, boolean result) {
+        return true;
     }
 
-    public void on_client_subscribe(ClientInfo clientInfo, Property[] props, TopicFilter[] topic, State state) {
+    public void on_client_subscribe(ClientInfo clientInfo, Property[] props, TopicFilter[] topic) {
     }
 
-    public void on_client_unsubscribe(ClientInfo clientInfo, Property[] props, TopicFilter[] topic, State state) {
+    public void on_client_unsubscribe(ClientInfo clientInfo, Property[] props, TopicFilter[] topic) {
     }
 
     // Sessions
-    public void on_session_created(ClientInfo clientInfo, State state) {
+    public void on_session_created(ClientInfo clientInfo) {
     }
 
-    public void on_session_subscribed(ClientInfo clientInfo, Topic topic, SubscribeOption opts, State state) {
+    public void on_session_subscribed(ClientInfo clientInfo, Topic topic, SubscribeOption opts) {
     }
 
-    public void on_session_unsubscribed(ClientInfo clientInfo, Topic topic, State state) {
+    public void on_session_unsubscribed(ClientInfo clientInfo, Topic topic) {
     }
 
-    public void on_session_resumed(ClientInfo clientInfo, State state) {
+    public void on_session_resumed(ClientInfo clientInfo) {
     }
 
-    public void on_session_discarded(ClientInfo clientInfo, State state) {
+    public void on_session_discarded(ClientInfo clientInfo) {
     }
 
-    public void on_session_takeovered(ClientInfo clientInfo, State state) {
+    public void on_session_takeovered(ClientInfo clientInfo) {
     }
 
-    public void on_session_terminated(ClientInfo clientInfo, Reason reason, State state) {
+    public void on_session_terminated(ClientInfo clientInfo, Reason reason) {
     }
 
     // Messages
-    public Message on_message_publish(Message message, State state) {
+    public Message on_message_publish(Message message) {
         return message;
     }
 
-    public void on_message_dropped(Message message, Reason reason, State state) {
+    public void on_message_dropped(Message message, Reason reason) {
     }
 
-    public void on_message_delivered(ClientInfo clientInfo, Message message, State state) {
+    public void on_message_delivered(ClientInfo clientInfo, Message message) {
     }
 
-    public void on_message_acked(ClientInfo clientInfo, Message message, State state) {
+    public void on_message_acked(ClientInfo clientInfo, Message message) {
     }	
 	
     /* Overriden callbacks end */

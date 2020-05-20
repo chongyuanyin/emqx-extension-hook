@@ -1,17 +1,17 @@
-package java.extension.handler.codec;
+package emqx.extension.java.handler.codec;
 
-public class Reason implements HandlerParameter {
+public class ReturnCode implements HandlerParameter {
 	
-	public final String value;		//Binary
+	public final String value;		//Atom
 	
-	public Reason(String value) {
+	public ReturnCode(String value) {
 		this.value = value;
 	}
-
+	
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("Reason (");
+		sb.append("ReturnCode (");
 		sb.append("value=" + value);
 		sb.append(")");
 		
@@ -21,11 +21,11 @@ public class Reason implements HandlerParameter {
 //	@Override
 //	public HandlerParameter parse(Object object) throws InvalidParameterException {
 //		try {
-//			String value = CodecUtil.binary2String(object);
-//			return new Reason(value);
+//			String value = CodecUtil.atom2String(object);
+//			return new ReturnCode(value);
 //			
 //		} catch (Exception e) {
-//			String error = MessageFormat.format("Invalid Reason: {0}", object);
+//			String error = MessageFormat.format("Invalid ReturnCode: {0}", object);
 //			throw new InvalidParameterException(error);
 //		}
 //	}

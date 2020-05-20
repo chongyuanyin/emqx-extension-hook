@@ -1,9 +1,10 @@
-package java.extension.handler;
+package emqx.extension.java.handler;
 
-import java.extension.handler.codec.ActionOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+
+import emqx.extension.java.handler.codec.ActionOption;
 
 public final class ActionOptionConfig {
 	

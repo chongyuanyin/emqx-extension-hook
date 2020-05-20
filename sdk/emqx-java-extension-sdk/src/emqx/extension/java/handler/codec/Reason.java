@@ -1,17 +1,17 @@
-package java.extension.handler.codec;
+package emqx.extension.java.handler.codec;
 
-public class Topic implements HandlerParameter {
+public class Reason implements HandlerParameter {
 	
 	public final String value;		//Binary
 	
-	public Topic(String value) {
+	public Reason(String value) {
 		this.value = value;
 	}
-	
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("Topic (");
+		sb.append("Reason (");
 		sb.append("value=" + value);
 		sb.append(")");
 		
@@ -22,10 +22,10 @@ public class Topic implements HandlerParameter {
 //	public HandlerParameter parse(Object object) throws InvalidParameterException {
 //		try {
 //			String value = CodecUtil.binary2String(object);
-//			return new Topic(value);
+//			return new Reason(value);
 //			
 //		} catch (Exception e) {
-//			String error = MessageFormat.format("Invalid Topic: {0}", object);
+//			String error = MessageFormat.format("Invalid Reason: {0}", object);
 //			throw new InvalidParameterException(error);
 //		}
 //	}

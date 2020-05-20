@@ -1,4 +1,4 @@
-package java.extension.exceptions;
+package emqx.extension.java.exceptions;
 
 public class InvalidParameterException extends Exception {
 
