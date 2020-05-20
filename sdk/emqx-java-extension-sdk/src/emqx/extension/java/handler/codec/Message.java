@@ -61,6 +61,34 @@ public class Message implements HandlerParameter, HandlerReturn {
 		return sb.toString();
 	}
 
+	public String getNode() {
+		return node;
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public int getQos() {
+		return qos;
+	}
+
+	public String getFrom() {
+		return from;
+	}
+
+	public String getTopic() {
+		return topic;
+	}
+
+	public byte[] getPayload() {
+		return payload;
+	}
+
+	public long getTimestamp() {
+		return timestamp;
+	}
+
 //	@Override
 //	public ResultCode getResultCode() {
 //		return resultCode;
