@@ -10,13 +10,13 @@ import erlport.terms.Tuple;
 
 public class Message implements HandlerParameter, HandlerReturn {
 	
-	public final String node;		//Atom
-	public final String id;		//Binary
-	public final int qos;			//int
-	public final String from;		//Binary
-	public final String topic;	//Binary
-	public final byte[] payload;	//Binary
-	public final long timestamp;	//long
+	public String node;		//Atom
+	public String id;		//Binary
+	public int qos;			//int
+	public String from;		//Binary
+	public String topic;	//Binary
+	public byte[] payload;	//Binary
+	public long timestamp;	//long
 	
 //	private ResultCode resultCode = ResultCode.SUC;
 	
@@ -60,34 +60,8 @@ public class Message implements HandlerParameter, HandlerReturn {
 		
 		return sb.toString();
 	}
-
-	public String getNode() {
-		return node;
-	}
-
-	public String getId() {
-		return id;
-	}
-
-	public int getQos() {
-		return qos;
-	}
-
-	public String getFrom() {
-		return from;
-	}
-
-	public String getTopic() {
-		return topic;
-	}
-
-	public byte[] getPayload() {
-		return payload;
-	}
-
-	public long getTimestamp() {
-		return timestamp;
-	}
+	
+	
 
 //	@Override
 //	public ResultCode getResultCode() {
